@@ -1,0 +1,35 @@
+services:
+  app:
+    ports:
+      - "80:8080"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localregistry/psiconet_app:${IMAGE_TAG:-latest}
+    container_name: psiconet_app
+    restart: always
+    env_file:
+      - .env.prod
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      APP_JWT_SECRET: ${APP_JWT_SECRET}
+      APP_JWT_EXPIRATION_MS: ${APP_JWT_EXPIRATION_MS}
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  db:
+    image: postgres:15
+    env_file:
+      - .env.prod
+    volumes:
+      - db_data_prod:/var/lib/postgresql/data
+
+volumes:
+  db_data_prod:
