@@ -1,4 +1,4 @@
-package com.psiconet.psiconetbackend;
+package com.psiconet;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
