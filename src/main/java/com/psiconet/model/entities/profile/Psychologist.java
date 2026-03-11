@@ -3,6 +3,8 @@ package com.psiconet.model.entities.profile;
 import com.psiconet.model.entities.access.User;
 import jakarta.persistence.*;
 import lombok.Data;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +30,10 @@ public class Psychologist {
     @Column(name = "telefone")
     private String phone;
 
+    @Column(unique = true)
+    private String cpf;
+
+    @Column(unique = true)
     private String crp;
 
     @Column(name = "foto")
@@ -35,6 +41,9 @@ public class Psychologist {
 
     @Column(name = "ativo")
     private Boolean isActive;
+
+    @Column(name = "data_nascimento")
+    private LocalDate birthDate;
 
     @Column(name = "tempo_experiencia")
     private Integer experienceTime;

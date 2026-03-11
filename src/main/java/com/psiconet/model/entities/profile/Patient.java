@@ -21,6 +21,9 @@ public class Patient {
     private String name;
     private String email;
 
+    @Column(unique = true)
+    private String cpf;
+
     @Column(name = "telefone")
     private String phone;
 
