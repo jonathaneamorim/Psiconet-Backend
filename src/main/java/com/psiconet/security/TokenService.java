@@ -24,7 +24,7 @@ public class TokenService {
             return JWT.create()
                     .withIssuer("psiconet")
                     .withSubject(user.getUsername())
-                    .withClaim("role", user.getAccessRole())
+                    .withClaim("role", user.getAccessRoleEnum().toString())
                     .withExpiresAt(generateExpirationDate())
                     .sign(algorithm);
         } catch (JWTCreationException exception) {
