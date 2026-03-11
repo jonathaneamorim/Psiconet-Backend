@@ -1,31 +1,35 @@
 package com.psiconet.controllers;
 
-import com.psiconet.model.dtos.LoginRequestDTO;
-import com.psiconet.model.entities.access.User;
-import com.psiconet.security.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.psiconet.model.dtos.auth.AuthenticationDTO;
+import com.psiconet.model.dtos.auth.LoginResponseDTO;
+import com.psiconet.model.dtos.auth.RegisterPatientDTO;
+import com.psiconet.model.dtos.auth.RegisterPsychologistDTO;
+import com.psiconet.services.AuthService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
+@RequiredArgsConstructor
 public class AuthController {
+    private final AuthService authService;
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    @PostMapping("/register/patient")
+    public ResponseEntity<String> registerPatient(@RequestBody RegisterPatientDTO data) {
+        authService.registerPatient(data);
+        return ResponseEntity.ok("Paciente cadastrado com sucesso!");
+    }
 
-    @Autowired
-    private TokenService tokenService;
+    @PostMapping("/register/psychologist")
+    public ResponseEntity<String> registerPsychologist(@RequestBody RegisterPsychologistDTO data) {
+        authService.registerPsychologist(data);
+        return ResponseEntity.ok("Psicólogo cadastrado com sucesso!");
+    }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginRequestDTO data) {
-        var usernamePassword = new UsernamePasswordAuthenticationToken(data.getUsername(), data.getPassword());
-        var auth = this.authenticationManager.authenticate(usernamePassword);
-
-        var token = tokenService.generateToken((User) auth.getPrincipal());
-
-        return ResponseEntity.ok(token);
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody AuthenticationDTO data) {
+        String token = authService.login(data);
+        return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 }
