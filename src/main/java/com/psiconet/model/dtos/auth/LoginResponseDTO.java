@@ -1,4 +1,4 @@
-package com.psiconet.model.dtos;
+package com.psiconet.model.dtos.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class LoginRequestDTO {
-    private String username;
-    private String password;
+public class LoginResponseDTO {
+    private String token;
 }
