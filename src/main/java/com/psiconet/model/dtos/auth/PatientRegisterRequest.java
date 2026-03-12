@@ -4,9 +4,9 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class RegisterPatientDTO {
+public class PatientRegisterRequest {
     private String email;
+    private String password;
     private String cpf;
     private LocalDate birthDate;
-    private String password;
 }

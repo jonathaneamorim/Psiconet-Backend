@@ -4,7 +4,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class RegisterPsychologistDTO {
+public class PsychologistRegisterRequest  {
     private String email;
     private String cpf;
     private String crp;
