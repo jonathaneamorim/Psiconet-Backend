@@ -18,12 +18,14 @@ public class TokenService {
     @Value("${api.security.token.secret}")
     private String secret;
 
+    private static final String ISSUER = "psiconet";
+
     public String generateToken(User user) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.create()
-                    .withIssuer("psiconet")
-                    .withSubject(user.getUsername())
+                    .withIssuer(ISSUER)
+                    .withSubject(String.valueOf(user.getId()))
                     .withClaim("role", user.getAccessRoleEnum().toString())
                     .withExpiresAt(generateExpirationDate())
                     .sign(algorithm);
@@ -36,7 +38,7 @@ public class TokenService {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
-                    .withIssuer("psiconet")
+                    .withIssuer(ISSUER)
                     .build()
                     .verify(token)
                     .getSubject();

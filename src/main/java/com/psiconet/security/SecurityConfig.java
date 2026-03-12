@@ -1,14 +1,12 @@
 package com.psiconet.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,41 +15,46 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Autowired
-    private SecurityFilter securityFilter;
+    // Filtro responsável por validar o token JWT em cada requisição
+    private final SecurityFilter securityFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(req -> {
 
-                    // Libera login e rotas de cadastro
-                    req.requestMatchers(HttpMethod.POST, "/auth/login").permitAll();
-                    req.requestMatchers(HttpMethod.POST, "/auth/register/patient").permitAll();
-                    req.requestMatchers(HttpMethod.POST, "/auth/register/psychologist").permitAll();
+        http
+                // Desativa CSRF pois estamos usando API stateless com JWT
+                .csrf(csrf -> csrf.disable())
 
-                    // Bloqueia as demais por role
-                    req.requestMatchers("/admin/**").hasRole("ADMIN");
-                    req.requestMatchers("/psychologist/**").hasRole("PSICOLOGO");
-                    req.requestMatchers("/patient/**").hasRole("PACIENTE");
+                // Define que a aplicação não usará sessão (stateless)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
 
-                    // Qualquer outra rota precisará de um token válido
-                    req.anyRequest().authenticated();
-                })
+                // Configuração de autorização das rotas
+                .authorizeHttpRequests(auth -> auth
+                        // Rotas de autenticação são públicas
+                        .requestMatchers("/auth/**").permitAll()
 
-                // Coloca nosso filtro de JWT antes do filtro padrão do Spring
-                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
+                        // Outras rotas precisam de autenticação
+                        .anyRequest().authenticated()
+                )
+
+                // Adiciona nosso filtro JWT antes do filtro padrão de autenticação
+                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
+    // Bean necessário para permitir uso do AuthenticationManager no AuthService
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
-        return configuration.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
     }
 
+    // Bean responsável por criptografar senhas
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
