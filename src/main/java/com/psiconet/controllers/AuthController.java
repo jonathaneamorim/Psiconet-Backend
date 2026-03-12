@@ -2,8 +2,8 @@ package com.psiconet.controllers;
 
 import com.psiconet.model.dtos.auth.AuthenticationDTO;
 import com.psiconet.model.dtos.auth.LoginResponseDTO;
-import com.psiconet.model.dtos.auth.RegisterPatientDTO;
-import com.psiconet.model.dtos.auth.RegisterPsychologistDTO;
+import com.psiconet.model.dtos.auth.PatientRegisterRequest;
+import com.psiconet.model.dtos.auth.PsychologistRegisterRequest;
 import com.psiconet.services.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,13 +16,13 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register/patient")
-    public ResponseEntity<String> registerPatient(@RequestBody RegisterPatientDTO data) {
+    public ResponseEntity<String> registerPatient(@RequestBody PatientRegisterRequest data) {
         authService.registerPatient(data);
         return ResponseEntity.ok("Paciente cadastrado com sucesso!");
     }
 
     @PostMapping("/register/psychologist")
-    public ResponseEntity<String> registerPsychologist(@RequestBody RegisterPsychologistDTO data) {
+    public ResponseEntity<String> registerPsychologist(@RequestBody PsychologistRegisterRequest data) {
         authService.registerPsychologist(data);
         return ResponseEntity.ok("Psicólogo cadastrado com sucesso!");
     }
