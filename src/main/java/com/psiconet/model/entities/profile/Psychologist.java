@@ -8,39 +8,33 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-@Data
 @Entity
 @Table(name = "psicologo")
+@Data
 public class Psychologist {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @OneToOne
-    @JoinColumn(name = "usuario_id")
+    @JoinColumn(name = "usuario_id", nullable = false)
     private User user;
-
-    private String name;
 
     @Column(name = "nome")
     private String fullName;
 
-    private String email;
-
     @Column(name = "telefone")
     private String phone;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String cpf;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String crp;
 
     @Column(name = "foto")
     private String photoUrl;
-
-    @Column(name = "ativo")
-    private Boolean isActive;
 
     @Column(name = "data_nascimento")
     private LocalDate birthDate;
@@ -55,7 +49,7 @@ public class Psychologist {
     @JoinTable(
             name = "especialidade_psicologo",
             joinColumns = @JoinColumn(name = "psicologo_id"),
-            inverseJoinColumns = @JoinColumn(name = "especialidades_id")
+            inverseJoinColumns = @JoinColumn(name = "especialidade_id")
     )
     private List<Specialty> specialties;
 }
