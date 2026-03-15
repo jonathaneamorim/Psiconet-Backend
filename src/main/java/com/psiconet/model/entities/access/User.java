@@ -4,10 +4,12 @@ import com.psiconet.model.enums.RoleEnum;
 import com.psiconet.model.enums.UserStatusEnum;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -35,6 +37,10 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private UserStatusEnum status = UserStatusEnum.PENDING_VERIFICATION;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
