@@ -9,7 +9,7 @@ services:
     container_name: psiconet_app
     restart: always
     env_file:
-      - .env.prod
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
@@ -27,7 +27,7 @@ services:
   db:
     image: postgres:15
     env_file:
-      - .env.prod
+      - .env
     volumes:
       - db_data_prod:/var/lib/postgresql/data
 
