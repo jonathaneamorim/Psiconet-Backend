@@ -1,20 +1,11 @@
-package com.psiconet.model.entities.profile;
+package com.psiconet.model.entities.embeddable;
 
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Data
-@Entity
-@Table(name = "local")
+@Embeddable
 public class Location {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "psicologo_id")
-    private Psychologist psychologist;
-
     private String cep;
 
     @Column(name = "logradouro")
@@ -35,9 +26,6 @@ public class Location {
     @Column(name = "complemento")
     private String complement;
 
-    @Column(name = "tipo_endereco")
-    private String addressType;
-
-    @Column(name = "ativo")
-    private Boolean isActive;
+    @Column(name = "pais")
+    private String country;
 }

@@ -1,6 +1,6 @@
 package com.psiconet.model.entities.clinical;
 
-import com.psiconet.model.entities.profile.Location;
+import com.psiconet.model.entities.embeddable.Location;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -18,8 +18,6 @@ public class Appointment {
     @JoinColumn(name = "paciente_psicologo_id")
     private TreatmentLink treatmentLink;
 
-    @ManyToOne
-    @JoinColumn(name = "local_id")
     private Location location;
 
     @Column(name = "data_hora")

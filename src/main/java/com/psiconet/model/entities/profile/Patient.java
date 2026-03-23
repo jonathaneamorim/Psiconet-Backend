@@ -1,14 +1,20 @@
 package com.psiconet.model.entities.profile;
 
 import com.psiconet.model.entities.access.User;
+import com.psiconet.model.entities.embeddable.Location;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
 @Table(name = "paciente")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Patient {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -32,4 +38,6 @@ public class Patient {
 
     @Column(name = "foto")
     private String photoUrl;
+
+    private Location location;
 }
