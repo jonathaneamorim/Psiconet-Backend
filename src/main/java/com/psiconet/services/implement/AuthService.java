@@ -1,6 +1,6 @@
-package com.psiconet.services;
+package com.psiconet.services.implement;
 
-import com.psiconet.exception.EmailAlreadyExistsException;
+import com.psiconet.infra.exceptions.EmailAlreadyExistsException;
 import com.psiconet.mapper.PatientMapper;
 import com.psiconet.mapper.PsychologistMapper;
 import com.psiconet.mapper.UserMapper;
@@ -15,15 +15,13 @@ import com.psiconet.model.enums.UserStatusEnum;
 import com.psiconet.repositories.profile.PatientRepository;
 import com.psiconet.repositories.profile.PsychologistRepository;
 import com.psiconet.repositories.access.UserRepository;
-import com.psiconet.security.TokenService;
+import com.psiconet.infra.security.TokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -67,6 +65,7 @@ public class AuthService {
         var usernamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.password());
         var auth = authenticationManager.authenticate(usernamePassword);
         User user = (User) auth.getPrincipal();
+        String token = tokenService.generateToken(user);
 
         if (!UserStatusEnum.ACTIVE.equals(user.getStatus())) throw new IllegalStateException("Usuário não está ativo");
 

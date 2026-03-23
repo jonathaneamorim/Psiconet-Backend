@@ -1,4 +1,4 @@
-package com.psiconet.security;
+package com.psiconet.infra.security;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -9,14 +9,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class TokenService {
 
     @Value("${api.security.token.secret}")
     private String secret;
+
+    @Value("${api.security.token.expiration_hours:2}")
+    private Integer expirationHours;
 
     private static final String ISSUER = "psiconet";
 
@@ -26,7 +28,7 @@ public class TokenService {
             return JWT.create()
                     .withIssuer(ISSUER)
                     .withSubject(String.valueOf(user.getId()))
-                    .withClaim("role", user.getAccessRoleEnum().toString())
+                    .withClaim("role", user.getRole().toString())
                     .withExpiresAt(generateExpirationDate())
                     .sign(algorithm);
         } catch (JWTCreationException exception) {
@@ -48,6 +50,6 @@ public class TokenService {
     }
 
     private Instant generateExpirationDate() {
-        return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"));
+        return Instant.now().plus(expirationHours, ChronoUnit.HOURS);
     }
 }

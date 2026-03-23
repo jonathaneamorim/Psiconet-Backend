@@ -1,4 +1,4 @@
-package com.psiconet.security;
+package com.psiconet.infra.security;
 
 import com.psiconet.repositories.access.UserRepository;
 import jakarta.servlet.FilterChain;

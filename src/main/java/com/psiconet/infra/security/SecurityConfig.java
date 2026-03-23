@@ -1,4 +1,4 @@
-package com.psiconet.security;
+package com.psiconet.infra.security;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -48,6 +48,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Rotas de autenticação são públicas
                         .requestMatchers("/auth/**").permitAll()
+
+                        // Rotas do Swagger
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
                         // Outras rotas precisam de autenticação
                         .anyRequest().authenticated()
