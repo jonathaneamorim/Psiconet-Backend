@@ -4,11 +4,10 @@ import com.psiconet.model.dtos.auth.AuthenticationDTO;
 import com.psiconet.model.dtos.auth.LoginResponseDTO;
 import com.psiconet.model.dtos.auth.PatientRegisterRequest;
 import com.psiconet.model.dtos.auth.PsychologistRegisterRequest;
-import com.psiconet.services.AuthService;
+import com.psiconet.services.implement.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
