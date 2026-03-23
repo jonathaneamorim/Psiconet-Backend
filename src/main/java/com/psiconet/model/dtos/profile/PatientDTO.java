@@ -1,10 +1,13 @@
 package com.psiconet.model.dtos.profile;
 
-import com.psiconet.model.dtos.access.UserDTO;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class PatientDTO {
-    private String id;
-    private UserDTO user;
     private String fullName;
     private String cpf;
     private String phone;
