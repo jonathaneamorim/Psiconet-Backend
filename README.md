@@ -3,6 +3,7 @@ Modulo backend do projeto Psiconet. Para ter acesso ao módulo de frontend cliqu
 Link: [Frontend](https://github.com/jonathaneamorim/Psiconet-Frontend)
 
 ## Docs
+- Swagger: http://localhost:8080/swagger-ui/index.html 
 
 ### Docker e Conteinerização
 - Local: docker compose up -d --build

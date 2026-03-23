@@ -1,8 +1,11 @@
 package com.psiconet.model.entities.profile;
 
 import com.psiconet.model.entities.access.User;
+import com.psiconet.model.entities.embeddable.Location;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -11,6 +14,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "psicologo")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Psychologist {
 
     @Id
@@ -44,6 +49,8 @@ public class Psychologist {
 
     @Column(name = "descricao")
     private String description;
+
+    private Location location;
 
     @ManyToMany
     @JoinTable(

@@ -1,6 +1,7 @@
 package com.psiconet.mapper;
 
 import com.psiconet.model.dtos.auth.PatientRegisterRequest;
+import com.psiconet.model.dtos.profile.PatientDTO;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.model.entities.profile.Patient;
 import org.mapstruct.Mapper;
@@ -15,4 +16,6 @@ public interface PatientMapper {
     @Mapping(target = "phone", ignore = true)
     @Mapping(target = "photoUrl", ignore = true)
     Patient toPatient(PatientRegisterRequest dto, User user);
+
+    PatientDTO toDto(Patient patient);
 }

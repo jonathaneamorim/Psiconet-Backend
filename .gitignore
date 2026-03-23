@@ -27,6 +27,7 @@ release.properties
 # --- Docker ---
 docker-compose.override.yml
 .docker/
+db/
 
 # --- Logs & OS ---
 *.log

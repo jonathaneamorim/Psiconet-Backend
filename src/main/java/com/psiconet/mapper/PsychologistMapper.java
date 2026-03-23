@@ -1,6 +1,7 @@
 package com.psiconet.mapper;
 
 import com.psiconet.model.dtos.auth.PsychologistRegisterRequest;
+import com.psiconet.model.dtos.profile.PsychologistDTO;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.model.entities.profile.Psychologist;
 import org.mapstruct.Mapper;
@@ -19,4 +20,5 @@ public interface PsychologistMapper {
     @Mapping(target = "specialties", ignore = true)
     Psychologist toPsychologist(PsychologistRegisterRequest dto, User user);
 
+    PsychologistDTO toDto(Psychologist psychologist);
 }
