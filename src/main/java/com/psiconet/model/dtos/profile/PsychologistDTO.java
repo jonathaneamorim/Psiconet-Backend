@@ -12,14 +12,11 @@ import java.util.List;
 @NoArgsConstructor
 public class PsychologistDTO {
     private UserDTO user;
-    private String name;
     private String fullName;
-    private String email;
     private String phone;
     private String cpf;
     private String crp;
     private String photoUrl;
-    private String isActive;
     private String birthDate;
     private String experienceTime;
     private String description;
