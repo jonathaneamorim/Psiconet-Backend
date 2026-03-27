@@ -10,24 +10,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
 
     @GetMapping("/me")
     public ResponseEntity<Object> getMe(Authentication authentication) {
-
-        System.out.println("authentication: " + authentication);
-
         User user = (User) authentication.getPrincipal();
-
-        System.out.println("user: " + user);
-
         Object profileDto = userService.getLoggedUserProfile(user);
-
-        System.out.println("profileDto: " + profileDto);
-
         return ResponseEntity.ok(profileDto);
     }
 }
