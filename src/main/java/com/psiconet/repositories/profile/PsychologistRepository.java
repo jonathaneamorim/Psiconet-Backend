@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public interface PsychologistRepository extends JpaRepository<Psychologist, UUID> {
     Optional<Psychologist> findByUser(User user);
+    Optional<Psychologist> findByFullNameContainingIgnoreCase(String fullName);
+    Optional<Psychologist> findByCrp(String crp);
 }
