@@ -1,6 +1,7 @@
 package com.psiconet.services.implement;
 
-import com.psiconet.infra.exceptions.EmailAlreadyExistsException;
+import com.psiconet.infra.exceptions.BusinessException;
+import com.psiconet.infra.security.TokenService;
 import com.psiconet.mapper.PatientMapper;
 import com.psiconet.mapper.PsychologistMapper;
 import com.psiconet.mapper.UserMapper;
@@ -12,12 +13,12 @@ import com.psiconet.model.entities.profile.Patient;
 import com.psiconet.model.entities.profile.Psychologist;
 import com.psiconet.model.enums.RoleEnum;
 import com.psiconet.model.enums.UserStatusEnum;
+import com.psiconet.repositories.access.UserRepository;
 import com.psiconet.repositories.profile.PatientRepository;
 import com.psiconet.repositories.profile.PsychologistRepository;
-import com.psiconet.repositories.access.UserRepository;
-import com.psiconet.infra.security.TokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,45 +31,148 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PatientRepository patientRepository;
     private final PsychologistRepository psychologistRepository;
+
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
+
     private final PatientMapper patientMapper;
     private final PsychologistMapper psychologistMapper;
     private final UserMapper userMapper;
 
     @Transactional
     public void registerPatient(PatientRegisterRequest data) {
-        User user = createUser(data.getEmail(), data.getPassword(), RoleEnum.PATIENT);
+
+        validateUserData(
+                data.getEmail(),
+                data.getCpf()
+        );
+
+        User user = userMapper.toPatientUser(
+                data,
+                RoleEnum.PATIENT
+        );
+
+        user.setPassword(
+                passwordEncoder.encode(data.getPassword())
+        );
+
+        user.setStatus(
+                UserStatusEnum.ACTIVE
+        );
+
         userRepository.save(user);
-        Patient patient = patientMapper.toPatient(data, user);
+
+        Patient patient = patientMapper.toPatient(
+                data,
+                user
+        );
+
         patientRepository.save(patient);
     }
 
     @Transactional
     public void registerPsychologist(PsychologistRegisterRequest data) {
-        User user = createUser(data.getEmail(), data.getPassword(), RoleEnum.PSYCHOLOGIST);
+
+        validateUserData(
+                data.getEmail(),
+                data.getCpf()
+        );
+
+        validatePsychologistData(
+                data.getCrp()
+        );
+
+        User user = userMapper.toPsychologistUser(
+                data,
+                RoleEnum.PSYCHOLOGIST
+        );
+
+        user.setPassword(
+                passwordEncoder.encode(data.getPassword())
+        );
+
+        user.setStatus(
+                UserStatusEnum.ACTIVE
+        );
+
         userRepository.save(user);
-        Psychologist psychologist = psychologistMapper.toPsychologist(data, user);
+
+        Psychologist psychologist =
+                psychologistMapper.toPsychologist(
+                        data,
+                        user
+                );
+
         psychologistRepository.save(psychologist);
     }
 
-    private User createUser(String email, String password, RoleEnum role) {
-        if (userRepository.existsByEmail(email)) throw new EmailAlreadyExistsException(email);
-        User user = userMapper.toUser(email, role);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setStatus(UserStatusEnum.ACTIVE);
-        return user;
+    private void validateUserData(
+            String email,
+            String cpf
+    ) {
+
+        if (userRepository.existsByEmail(email)) {
+
+            throw new BusinessException(
+                    "email",
+                    "E-mail já cadastrado."
+            );
+        }
+
+        if (userRepository.existsByCpf(cpf)) {
+
+            throw new BusinessException(
+                    "cpf",
+                    "CPF já cadastrado."
+            );
+        }
+    }
+
+    private void validatePsychologistData(String crp) {
+
+        if (psychologistRepository.existsByCrp(crp)) {
+
+            throw new BusinessException(
+                    "crp",
+                    "CRP já cadastrado."
+            );
+        }
     }
 
     public String login(AuthenticationDTO data) {
-        var usernamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.password());
-        var auth = authenticationManager.authenticate(usernamePassword);
-        User user = (User) auth.getPrincipal();
-        String token = tokenService.generateToken(user);
 
-        if (!UserStatusEnum.ACTIVE.equals(user.getStatus())) throw new IllegalStateException("Usuário não está ativo");
+        try {
 
-        return tokenService.generateToken(user);
+            var usernamePassword =
+                    new UsernamePasswordAuthenticationToken(
+                            data.email(),
+                            data.password()
+                    );
+
+            var auth =
+                    authenticationManager.authenticate(
+                            usernamePassword
+                    );
+
+            User user = (User) auth.getPrincipal();
+
+            if (!UserStatusEnum.ACTIVE.equals(user.getStatus())) {
+
+                throw new BusinessException(
+                        "account",
+                        "Usuário não está ativo."
+                );
+            }
+
+            return tokenService.generateToken(user);
+
+        } catch (BadCredentialsException ex) {
+
+            throw new BusinessException(
+                    "credentials",
+                    "E-mail ou senha inválidos."
+            );
+        }
     }
 }

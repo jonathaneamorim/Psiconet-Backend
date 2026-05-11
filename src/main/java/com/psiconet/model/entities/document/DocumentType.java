@@ -2,8 +2,11 @@ package com.psiconet.model.entities.document;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "tipo_documento")
 public class DocumentType {

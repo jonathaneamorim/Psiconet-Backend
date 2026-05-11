@@ -3,10 +3,14 @@ package com.psiconet.model.entities.clinical;
 import com.psiconet.model.entities.embeddable.Location;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "agendamento")
 public class Appointment {

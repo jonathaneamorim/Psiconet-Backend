@@ -19,6 +19,7 @@ public class AuthController {
 
     @PostMapping("/register/patient")
     public ResponseEntity<String> registerPatient(@Valid @RequestBody PatientRegisterRequest data) {
+        System.out.println(data);
         authService.registerPatient(data);
         return ResponseEntity.status(HttpStatus.CREATED).body("Paciente cadastrado com sucesso!");
     }

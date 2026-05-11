@@ -1,20 +1,69 @@
 package com.psiconet.mapper;
 
 import com.psiconet.model.dtos.access.UserDTO;
+import com.psiconet.model.dtos.auth.PatientRegisterRequest;
+import com.psiconet.model.dtos.auth.PsychologistRegisterRequest;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.model.enums.RoleEnum;
 import org.mapstruct.*;
 
-@Mapper(componentModel = "spring",  unmappedTargetPolicy = ReportingPolicy.IGNORE)
+import java.time.LocalDate;
+
+@Mapper(
+        componentModel = "spring",
+        unmappedTargetPolicy = ReportingPolicy.IGNORE
+)
 public interface UserMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+
+    @Mapping(target = "phone", ignore = true)
+    @Mapping(target = "fullName", ignore = true)
+    @Mapping(target = "photoUrl", ignore = true)
+    @Mapping(target = "location", ignore = true)
+
     @Mapping(target = "role", source = "role")
     @Mapping(target = "email", source = "email")
-    User toUser(String email, RoleEnum role);
+    @Mapping(target = "cpf", source = "cpf")
+    @Mapping(target = "birthDate", source = "birthDate")
 
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    User toUser(
+            String email,
+            String cpf,
+            LocalDate birthDate,
+            RoleEnum role
+    );
+
+    @InheritConfiguration(name = "toUser")
+    default User toPatientUser(
+            PatientRegisterRequest request,
+            RoleEnum role
+    ) {
+
+        return toUser(
+                request.getEmail(),
+                request.getCpf(),
+                request.getBirthDate(),
+                role
+        );
+    }
+
+    @InheritConfiguration(name = "toUser")
+    default User toPsychologistUser(
+            PsychologistRegisterRequest request,
+            RoleEnum role
+    ) {
+
+        return toUser(
+                request.getEmail(),
+                request.getCpf(),
+                request.getBirthDate(),
+                role
+        );
+    }
+
     UserDTO toDto(User user);
 }

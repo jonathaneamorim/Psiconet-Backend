@@ -1,6 +1,5 @@
 package com.psiconet.infra.exceptions;
 
-import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -46,7 +45,7 @@ public class GlobalExceptionHandler {
 
     // Handler que captura exceções de validação de DTO e lança um bad request com os campos errados
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
 
         ex.getBindingResult().getAllErrors().forEach((error) -> {
@@ -55,6 +54,34 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+        ErrorResponse response = new ErrorResponse(
+                "Erro de validação",
+                errors
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(
+            BusinessException ex
+    ) {
+
+        Map<String, String> errors = new HashMap<>();
+
+        if (ex.getField() != null) {
+            errors.put(ex.getField(), ex.getMessage());
+        }
+
+        ErrorResponse response = ErrorResponse.builder()
+                .message(ex.getMessage())
+                .errors(errors)
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
     }
 }

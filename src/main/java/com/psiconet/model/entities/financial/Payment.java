@@ -4,11 +4,15 @@ import com.psiconet.model.entities.clinical.TreatmentLink;
 import com.psiconet.model.entities.clinical.Appointment;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "pagamento")
 public class Payment {

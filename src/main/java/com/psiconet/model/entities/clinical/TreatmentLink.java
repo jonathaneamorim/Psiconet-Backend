@@ -4,10 +4,14 @@ import com.psiconet.model.entities.profile.Patient;
 import com.psiconet.model.entities.profile.Psychologist;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "paciente_piscologo")
 public class TreatmentLink {

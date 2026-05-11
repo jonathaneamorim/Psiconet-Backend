@@ -2,8 +2,11 @@ package com.psiconet.model.entities.embeddable;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @Embeddable
 public class Location {
     private String cep;

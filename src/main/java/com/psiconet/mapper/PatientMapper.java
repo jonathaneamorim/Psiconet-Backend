@@ -12,9 +12,6 @@ public interface PatientMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", source = "user")
-    @Mapping(target = "fullName", constant = "")
-    @Mapping(target = "phone", ignore = true)
-    @Mapping(target = "photoUrl", ignore = true)
     Patient toPatient(PatientRegisterRequest dto, User user);
 
     PatientDTO toDto(Patient patient);

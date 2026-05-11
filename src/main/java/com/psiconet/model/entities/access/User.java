@@ -1,5 +1,6 @@
 package com.psiconet.model.entities.access;
 
+import com.psiconet.model.entities.embeddable.Location;
 import com.psiconet.model.enums.RoleEnum;
 import com.psiconet.model.enums.UserStatusEnum;
 import jakarta.persistence.*;
@@ -10,12 +11,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -27,6 +30,24 @@ public class User implements UserDetails {
 
     @Column(unique = true, nullable = false)
     private String email;
+
+    @Column(unique = true, nullable = false)
+    private String cpf;
+
+    @Column(name = "telefone")
+    private String phone;
+
+    @Column(name = "nome")
+    private String fullName;
+
+    @Column(name = "data_nascimento")
+    private LocalDate birthDate;
+
+    @Column(name = "foto")
+    private String photoUrl;
+
+    @Embedded
+    private Location location;
 
     @Column(nullable = false)
     private String password;
