@@ -1,11 +1,10 @@
 package com.psiconet.model.dtos.access;
 
 import com.psiconet.model.enums.RoleEnum;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserDTO {

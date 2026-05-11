@@ -1,18 +1,15 @@
 package com.psiconet.model.entities.profile;
 
 import com.psiconet.model.entities.access.User;
-import com.psiconet.model.entities.embeddable.Location;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
 @Table(name = "paciente")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Patient {
@@ -20,24 +17,7 @@ public class Patient {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @OneToOne
-    @JoinColumn(name = "usuario_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", nullable = false, unique = true)
     private User user;
-
-    @Column(name = "nome")
-    private String fullName;
-
-    @Column(unique = true, nullable = false)
-    private String cpf;
-
-    @Column(name = "telefone")
-    private String phone;
-
-    @Column(name = "data_nascimento")
-    private LocalDate birthDate;
-
-    @Column(name = "foto")
-    private String photoUrl;
-
-    private Location location;
 }

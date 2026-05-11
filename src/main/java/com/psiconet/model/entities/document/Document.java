@@ -3,10 +3,14 @@ package com.psiconet.model.entities.document;
 import com.psiconet.model.entities.clinical.TreatmentLink;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "documento")
 public class Document {

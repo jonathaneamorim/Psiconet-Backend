@@ -3,8 +3,11 @@ package com.psiconet.model.entities.financial;
 import com.psiconet.model.entities.profile.Psychologist;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "metodo_pagamento")
 public class PaymentMethod {
