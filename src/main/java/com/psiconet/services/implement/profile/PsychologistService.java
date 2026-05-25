@@ -35,10 +35,17 @@ public class PsychologistService {
     }
 
     @Transactional(readOnly = true)
-    public PsychologistProfileDTO getProfile(UUID userId) {
+    public PsychologistProfileDTO getProfile(User currentUser, UUID userId) {
         Psychologist psychologist = psychologistRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException(Psychologist.class, userId));
-        return psychologistMapper.toProfileDto(psychologist);
+        
+        PsychologistProfileDTO dto = psychologistMapper.toProfileDto(psychologist);
+        
+        ConnectionStatusInfoDTO connectionInfo = connectionService.getConnectionStatus(currentUser, psychologist.getUser());
+        dto.setConnectionStatus(connectionInfo.getStatus());
+        dto.setConnectionId(connectionInfo.getConnectionId());
+        
+        return dto;
     }
 
     @Transactional(readOnly = true)

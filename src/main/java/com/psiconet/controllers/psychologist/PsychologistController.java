@@ -31,8 +31,11 @@ public class PsychologistController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PsychologistProfileDTO> getProfile(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.getProfile(id));
+    public ResponseEntity<PsychologistProfileDTO> getProfile(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id
+    ) {
+        return ResponseEntity.ok(service.getProfile(user, id));
     }
 
     @GetMapping("/search")

@@ -52,7 +52,7 @@ O projeto está organizado por domínios e responsabilidades:
 
 ## 🤝 Sistema de Conexões
 Gerencia o vínculo profissional entre Pacientes e Psicólogos.
-- **Status:** `PENDING`, `ACCEPTED`, `REJECTED`, `REMOVED`.
+- **Status Relativo:** `NONE`, `PENDING_SENT`, `PENDING_RECEIVED`, `CONNECTED`.
 - **Regras de Negócio:**
     - Administradores não participam de conexões.
     - Não é permitido conectar-se a si mesmo.
@@ -61,13 +61,112 @@ Gerencia o vínculo profissional entre Pacientes e Psicólogos.
 ## 🚀 Performance e Escalabilidade
 - **N+1 Prevention:** Uso de `@EntityGraph` para relacionamentos OneToOne/ManyToOne.
 - **Batch Fetching:** Uso de `@BatchSize` em coleções ManyToMany (ex: Especialidades) para evitar carregamento excessivo em memória durante a paginação.
-- **Transacionalidade:** Métodos de leitura marcados com `@Transactional(readOnly = true)`.
+
+---
+
+## 🚦 Catálogo de Endpoints
+
+### 1. Autenticação (`/auth`)
+
+#### **POST /auth/register/patient**
+- **Descrição:** Cadastro de novo paciente.
+- **Request Body (`PatientRegisterRequest`):**
+    - `email`, `fullName`, `cpf`, `birthDate`, `password`.
+- **Response:** `201 Created`.
+
+#### **POST /auth/register/psychologist**
+- **Descrição:** Cadastro de novo psicólogo.
+- **Request Body (`PsychologistRegisterRequest`):**
+    - `email`, `fullName`, `cpf`, `birthDate`, `password`, `crp`.
+- **Response:** `201 Created`.
+
+#### **POST /auth/login**
+- **Descrição:** Autenticação e geração de token.
+- **Request Body (`AuthenticationDTO`):**
+    - `email`, `password`.
+- **Response (`LoginResponseDTO`):**
+    - `token`: String JWT.
+
+---
+
+### 2. Perfis e Busca (`/psychologists`, `/patients`, `/users`)
+
+#### **GET /users/me**
+- **Descrição:** Retorna os dados completos do perfil do usuário logado.
+- **Response:** `PatientMeDTO` ou `PsychologistMeDTO`.
+
+#### **GET /psychologists/{id}**
+- **Descrição:** Perfil público de um psicólogo com contexto de conexão.
+- **Response (`PsychologistProfileDTO`):**
+    - `id`, `fullName`, `photoUrl`, `crp`, `specialties`, `experienceTime`, `description`, `city`, `state`, `connectionStatus`, `connectionId`.
+
+#### **GET /psychologists/search**
+- **Descrição:** Busca paginada de psicólogos.
+- **Query Params:** `name` (opcional), `crp` (opcional), `page`, `size`.
+- **Response:** `Page<SearchPsychologistDTO>`.
+
+#### **GET /patients/{id}**
+- **Descrição:** Perfil público de um paciente com contexto de conexão.
+- **Response (`PatientProfileDTO`):**
+    - `id`, `fullName`, `photoUrl`, `city`, `state`, `connectionStatus`, `connectionId`.
+
+#### **GET /patients/search**
+- **Descrição:** Busca paginada de pacientes.
+- **Query Params:** `name` (obrigatório), `page`, `size`.
+- **Response:** `Page<SearchPatientDTO>`.
+
+---
+
+### 3. Conexões (`/connections`)
+
+#### **POST /connections/{targetUserId}**
+- **Descrição:** Envia solicitação de conexão.
+- **Response:** `200 OK`.
+
+#### **PATCH /connections/{id}/accept**
+- **Descrição:** Aceita solicitação recebida.
+- **Response:** `204 No Content`.
+
+#### **PATCH /connections/{id}/reject**
+- **Descrição:** Rejeita solicitação recebida.
+- **Response:** `204 No Content`.
+
+#### **DELETE /connections/{id}**
+- **Descrição:** Cancela solicitação ou remove conexão ativa.
+- **Response:** `204 No Content`.
+
+#### **GET /connections**
+- **Descrição:** Lista conexões ativas do usuário.
+- **Response:** `Page<ActiveConnectionDTO>`.
+
+#### **GET /connections/pending**
+- **Descrição:** Lista solicitações recebidas pendentes.
+- **Response:** `Page<ConnectionDTO>`.
+
+---
+
+### 4. Administração (`/admin`) - Exige `ROLE_ADMIN`
+
+#### **GET /admin/users**
+- **Descrição:** Lista todos os usuários do sistema.
+- **Response:** `Page<UsersToListAdminDTO>`.
+
+#### **PATCH /admin/users/{id}/status**
+- **Descrição:** Altera status de um usuário (`ACTIVE`, `INACTIVE`, `BLOCKED`, etc.).
+- **Response:** `204 No Content`.
+
+#### **PUT /admin/users/{id}**
+- **Descrição:** Atualização administrativa de dados do usuário.
+- **Response:** `204 No Content`.
+
+---
 
 ## 🛠 Diretrizes de Desenvolvimento
-1. **DTOs:** Sempre use DTOs para entrada e saída de dados. Nunca exponha entidades JPA.
-2. **Validação:** Use anotações do Bean Validation nos DTOs de Request.
-3. **Mappers:** Utilize MapStruct para todas as conversões de tipos.
-4. **Logs:** Utilize `log.info`, `log.warn` ou `log.error` para eventos importantes, evitando dados sensíveis.
+1. **DTOs:** Sempre use DTOs. Nunca exponha entidades JPA.
+2. **Validação:** Use Bean Validation nos DTOs de Request.
+3. **Mappers:** Utilize MapStruct para todas as conversões.
+4. **Relacionamento:** Inclua `connectionStatus` e `connectionId` em perfis públicos.
+5. **Erros:** Trate exceções de negócio com `BusinessException`.
 
 ## 📖 Links Úteis
 - **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`

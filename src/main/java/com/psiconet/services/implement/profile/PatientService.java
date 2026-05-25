@@ -34,10 +34,17 @@ public class PatientService {
     }
 
     @Transactional(readOnly = true)
-    public PatientProfileDTO getProfile(UUID userId) {
+    public PatientProfileDTO getProfile(User currentUser, UUID userId) {
         Patient patient = patientRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException(Patient.class, userId));
-        return patientMapper.toProfileDto(patient);
+        
+        PatientProfileDTO dto = patientMapper.toProfileDto(patient);
+        
+        ConnectionStatusInfoDTO connectionInfo = connectionService.getConnectionStatus(currentUser, patient.getUser());
+        dto.setConnectionStatus(connectionInfo.getStatus());
+        dto.setConnectionId(connectionInfo.getConnectionId());
+        
+        return dto;
     }
 
     @Transactional(readOnly = true)

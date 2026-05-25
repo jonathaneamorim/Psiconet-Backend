@@ -27,6 +27,8 @@ public interface PatientMapper {
     @Mapping(target = "city", source = "user.location.city")
     @Mapping(target = "state", source = "user.location.state")
     @Mapping(target = "createdAt", source = "user.createdAt")
+    @Mapping(target = "connectionStatus", ignore = true)
+    @Mapping(target = "connectionId", ignore = true)
     PatientProfileDTO toProfileDto(Patient patient);
 
     @Mapping(target = "id", source = "user.id")

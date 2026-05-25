@@ -50,6 +50,8 @@ public interface PsychologistMapper {
     @Mapping(target = "city", source = "user.location.city")
     @Mapping(target = "state", source = "user.location.state")
     @Mapping(target = "createdAt", source = "user.createdAt")
+    @Mapping(target = "connectionStatus", ignore = true)
+    @Mapping(target = "connectionId", ignore = true)
     PsychologistProfileDTO toProfileDto(Psychologist psychologist);
 
     @Mapping(target = "id", source = "user.id")

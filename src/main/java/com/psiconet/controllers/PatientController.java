@@ -28,8 +28,11 @@ public class PatientController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PatientProfileDTO> getProfile(@PathVariable UUID id) {
-        return ResponseEntity.ok(patientService.getProfile(id));
+    public ResponseEntity<PatientProfileDTO> getProfile(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id
+    ) {
+        return ResponseEntity.ok(patientService.getProfile(user, id));
     }
 
     @GetMapping("/search")
