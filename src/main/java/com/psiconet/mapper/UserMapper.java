@@ -1,6 +1,7 @@
 package com.psiconet.mapper;
 
 import com.psiconet.model.dtos.access.UserDTO;
+import com.psiconet.model.dtos.admin.UsersToListAdminDTO;
 import com.psiconet.model.dtos.auth.PatientRegisterRequest;
 import com.psiconet.model.dtos.auth.PsychologistRegisterRequest;
 import com.psiconet.model.entities.access.User;
@@ -66,4 +67,14 @@ public interface UserMapper {
     }
 
     UserDTO toDto(User user);
+
+    @Mapping(target = "maskedCpf", source = "cpf", qualifiedByName = "maskCpf")
+    UsersToListAdminDTO toAdminListDto(User user);
+
+    @Named("maskCpf")
+    default String maskCpf(String cpf) {
+        if (cpf == null || cpf.length() < 11) return cpf;
+        // Format: 123.***.***-45
+        return cpf.substring(0, 3) + ".***.***-" + cpf.substring(9);
+    }
 }
