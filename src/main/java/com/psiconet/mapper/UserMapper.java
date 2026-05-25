@@ -22,17 +22,18 @@ public interface UserMapper {
     @Mapping(target = "createdAt", ignore = true)
 
     @Mapping(target = "phone", ignore = true)
-    @Mapping(target = "fullName", ignore = true)
     @Mapping(target = "photoUrl", ignore = true)
     @Mapping(target = "location", ignore = true)
 
     @Mapping(target = "role", source = "role")
     @Mapping(target = "email", source = "email")
+    @Mapping(target = "fullName", source = "fullName")
     @Mapping(target = "cpf", source = "cpf")
     @Mapping(target = "birthDate", source = "birthDate")
 
     User toUser(
             String email,
+            String fullName,
             String cpf,
             LocalDate birthDate,
             RoleEnum role
@@ -46,6 +47,7 @@ public interface UserMapper {
 
         return toUser(
                 request.getEmail(),
+                request.getFullName(),
                 request.getCpf(),
                 request.getBirthDate(),
                 role
@@ -60,6 +62,7 @@ public interface UserMapper {
 
         return toUser(
                 request.getEmail(),
+                request.getFullName(),
                 request.getCpf(),
                 request.getBirthDate(),
                 role

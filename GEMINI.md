@@ -1,120 +1,74 @@
-# Project Psiconet - Backend Documentation
+# Projeto Psiconet - Documentação do Backend
 
-This document serves as the primary source of truth for AI agents and developers working on the Psiconet Backend.
+Este documento é a fonte oficial de verdade para desenvolvedores e agentes de IA trabalhando no Backend do Psiconet.
 
-## 🚀 Project Overview
-Psiconet is a platform designed to connect psychologists and patients, facilitating appointment scheduling, medical record management, and secure communication. The backend is built using **Spring Boot 3.3.5** and follows a layered architecture.
+## 🚀 Visão Geral do Projeto
+O Psiconet é uma plataforma que conecta psicólogos e pacientes, facilitando agendamentos, gestão de prontuários e comunicação segura. O backend é construído com **Spring Boot 3.3.5** e segue uma arquitetura em camadas limpa, escalável e segura.
 
-## 🛠 Tech Stack
-- **Language:** Java 17
+## 🛠 Stack Tecnológica
+- **Linguagem:** Java 17
 - **Framework:** Spring Boot 3.3.5
-- **Security:** Spring Security with JWT (Stateless)
-- **Database:** PostgreSQL
-- **Persistence:** Spring Data JPA
-- **Mapping:** MapStruct & Lombok
-- **Documentation:** SpringDoc OpenAPI (Swagger)
-- **Validation:** Hibernate Validator (Bean Validation)
+- **Segurança:** Spring Security com JWT (Stateless)
+- **Banco de Dados:** PostgreSQL
+- **Persistência:** Spring Data JPA (Hibernate)
+- **Mapeamento:** MapStruct & Lombok
+- **Documentação:** SpringDoc OpenAPI (Swagger)
+- **Validação:** Bean Validation (Hibernate Validator)
+- **Logging:** SLF4J com Lombok (@Slf4j)
 
-## 📁 Project Structure
-The project follows a standard Spring Boot structure:
+## 📁 Estrutura do Projeto
+O projeto está organizado por domínios e responsabilidades:
 - `src/main/java/com/psiconet/`
-    - `controllers/`: REST Endpoints (Auth, User, Admin, Psychologist).
-    - `infra/`: Infrastructure concerns (Security, Exceptions, Config, Swagger).
-    - `mapper/`: MapStruct interfaces for DTO <-> Entity conversion.
-    - `model/`: Data definitions.
-        - `entities/`: JPA Entities (Access, Clinical, Document, Financial, Profile).
-        - `dtos/`: Data Transfer Objects (Auth, Admin, Profile, Access).
-        - `enums/`: Enumerations (Roles, Statuses).
-    - `repositories/`: Spring Data JPA repositories.
-    - `services/`: Business logic.
-        - `interfaces/`: Service definitions.
-        - `implement/`: Service implementations.
-- `src/main/resources/`: Configuration files (`application.properties`).
-- `src/test/java/`: Unit and integration tests.
+    - `controllers/`: Endpoints REST (Auth, User, Admin, Psychologist, Patient, Connection).
+    - `infra/`: Infraestrutura (Segurança, Configurações de Exceções, Swagger).
+    - `mapper/`: Interfaces MapStruct para conversão Entidade <-> DTO.
+    - `model/`:
+        - `entities/`: Entidades JPA.
+        - `dtos/`: Objetos de Transferência de Dados.
+        - `enums/`: Enumerações (Roles, Status, etc.).
+    - `repositories/`: Interfaces de acesso ao banco.
+    - `services/`: Lógica de negócio (Interfaces e Implementações).
 
-## 🔐 Security & Authentication
-- **Authentication:** JWT-based stateless authentication.
-- **Roles:** Defined in `RoleEnum` (e.g., `ADMIN`, `PSYCHOLOGIST`, `PATIENT`).
-- **Authorization:** Handled in `SecurityConfig.java` using `SecurityFilter`.
-- **Registration Flow:**
-    - `/auth/register/patient`: Registers a patient.
-    - `/auth/register/psychologist`: Registers a psychologist.
-- **Login:** `/auth/login` returns a JWT token.
+## 🔐 Segurança e Autenticação
+- **Autenticação:** Baseada em JWT (Stateless). O token contém o e-mail (subject) e o papel (role) do usuário.
+- **Roles:** `ADMIN`, `PSYCHOLOGIST`, `PATIENT`.
+- **Proteção de Rotas:** 
+    - `/auth/**`: Público.
+    - `/admin/**`: Apenas `ROLE_ADMIN`.
+    - Outras: Autenticadas.
+- **Privacidade:** CPFs são mascarados para admins e nunca expostos publicamente. Senhas e campos de segurança interna nunca são serializados.
 
-## 🏗 Core Entities & Data Model
-The project uses a relational database (PostgreSQL) with the following key entities and relationships:
+## 🏗 Padrões de API
+- **Paginação:** Todos os endpoints de listagem/busca utilizam `org.springframework.data.domain.Page`.
+- **Respostas de Erro:** Padronizadas via `GlobalExceptionHandler` usando o objeto `ErrorResponse`:
+    - `status`: Código HTTP.
+    - `message`: Mensagem amigável.
+    - `timestamp`: Data/hora do erro.
+    - `errors`: (Opcional) Mapa de erros de validação de campos.
+- **Verbos REST:** 
+    - `POST` para criação (201 Created).
+    - `PUT`/`PATCH` para atualizações.
+    - `DELETE` para remoção (204 No Content).
 
-- **User (`usuario`):**
-    - Base entity for authentication and identity.
-    - Fields: `id`, `email`, `cpf`, `password`, `role`, `status`, `fullName`, `phone`, `photoUrl`, `location`.
-    - One-to-One relationship with `Patient` or `Psychologist`.
+## 🤝 Sistema de Conexões
+Gerencia o vínculo profissional entre Pacientes e Psicólogos.
+- **Status:** `PENDING`, `ACCEPTED`, `REJECTED`, `REMOVED`.
+- **Regras de Negócio:**
+    - Administradores não participam de conexões.
+    - Não é permitido conectar-se a si mesmo.
+    - Apenas o destinatário original pode aceitar/rejeitar solicitações.
 
-- **Patient (`paciente`):**
-    - Extends the user as a patient profile.
-    - Fields: `id`, `usuario_id`.
+## 🚀 Performance e Escalabilidade
+- **N+1 Prevention:** Uso de `@EntityGraph` para relacionamentos OneToOne/ManyToOne.
+- **Batch Fetching:** Uso de `@BatchSize` em coleções ManyToMany (ex: Especialidades) para evitar carregamento excessivo em memória durante a paginação.
+- **Transacionalidade:** Métodos de leitura marcados com `@Transactional(readOnly = true)`.
 
-- **Psychologist (`psicologo`):**
-    - Extends the user as a psychologist profile.
-    - Fields: `id`, `usuario_id`, `crp`, `experienceTime`, `description`.
-    - Many-to-Many relationship with `Specialty`.
+## 🛠 Diretrizes de Desenvolvimento
+1. **DTOs:** Sempre use DTOs para entrada e saída de dados. Nunca exponha entidades JPA.
+2. **Validação:** Use anotações do Bean Validation nos DTOs de Request.
+3. **Mappers:** Utilize MapStruct para todas as conversões de tipos.
+4. **Logs:** Utilize `log.info`, `log.warn` ou `log.error` para eventos importantes, evitando dados sensíveis.
 
-- **Specialty (`especialidade`):**
-    - Areas of expertise (e.g., "Cognitive Behavioral Therapy").
-    - Joined via `especialidade_psicologo`.
-
-- **Appointment (`agendamento`):**
-    - Link between a `Patient` and a `Psychologist` for a session.
-
-- **Connection (`conexao`):**
-    - Status-based link between a Patient and a Psychologist (e.g., PENDING, ACCEPTED).
-
-## 🚦 API Endpoints (Summary)
-- **Auth:** `/auth/**` (Public)
-    - `POST /auth/register/patient`
-    - `POST /auth/register/psychologist`
-    - `POST /auth/login`
-- **Psychologists:** `/psychologists/**`
-    - `GET /psychologists/search?name={name}&crp={crp}`
-- **Users:** `/users/**`
-- **Admin:** `/admin/**` (Requires `ROLE_ADMIN`)
-    - `GET /admin/users`: Paginated list of users. Supports `page`, `size`, and `sort` (default: `fullName`).
-    - `PATCH /admin/users/{id}/status`: Updates user status only.
-    - `PUT /admin/users/{id}`: Updates full name, phone, and status.
-
-## 🛡️ Admin Module & Security
-The Admin module provides tools for platform management, strictly protected by `ROLE_ADMIN`.
-
-### Data Exposure & Privacy
-- **Masked CPF:** For privacy, CPFs in admin listings are masked as `123.***.***-45`.
-- **Sensitive Data:** Passwords, full birth dates, and full CPFs are never exposed in administrative DTOs.
-- **Minimal Exposure:** DTOs are tailored to show only necessary information for management.
-
-### Editable vs. Protected Fields
-- **Editable:** `fullName`, `phone`, `status`.
-- **Protected:** `id`, `email`, `cpf`, `role`, `createdAt`. These fields cannot be modified via administrative endpoints to maintain data integrity.
-
-### Pagination
-Administrative lists use Spring Data `Page` response, including metadata like `totalElements`, `totalPages`, and `content`.
-
-### Future Audit Logging
-The structure is prepared to integrate with the `ChangeLog` entity for tracking administrative actions. Service methods are transactional and centralized to facilitate hook injection for logging.
-
-## ⚠️ Error Handling
-- Handled by `GlobalExceptionHandler`.
-- Common responses:
-    - `400 Bad Request`: Validation errors or business rule violations.
-    - `401 Unauthorized`: Missing or invalid JWT.
-    - `404 Not Found`: Entity not found.
-    - `409 Conflict`: Duplicate data (e.g., email/CPF already exists).
-
-## 🛠 Development Guidelines
-- **Naming:** Follow standard Java CamelCase.
-- **Entities:** Always use Lombok `@Getter`, `@Setter`, `@NoArgsConstructor`.
-- **DTOs:** Use DTOs for all request/response bodies.
-- **Mappers:** Use MapStruct for conversions.
-- **Validation:** Use Bean Validation annotations (`@NotBlank`, `@Email`, etc.).
-- **Tests:** Add unit tests for business logic in services and integration tests for controllers.
-
-## 📖 Useful Links
+## 📖 Links Úteis
 - **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
-- **Frontend Repo:** [Psiconet-Frontend](https://github.com/jonathaneamorim/Psiconet-Frontend)
+- **Repositório Frontend:** [Psiconet-Frontend](https://github.com/jonathaneamorim/Psiconet-Frontend)

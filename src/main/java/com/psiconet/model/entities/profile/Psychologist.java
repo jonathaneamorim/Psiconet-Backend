@@ -33,6 +33,7 @@ public class Psychologist {
     private String description;
 
     @ManyToMany
+    @org.hibernate.annotations.BatchSize(size = 20)
     @JoinTable(
             name = "especialidade_psicologo",
             joinColumns = @JoinColumn(name = "psicologo_id"),

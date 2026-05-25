@@ -141,38 +141,16 @@ public class AuthService {
     }
 
     public String login(AuthenticationDTO data) {
+        var usernamePassword = new UsernamePasswordAuthenticationToken(
+                data.email(),
+                data.password()
+        );
 
-        try {
+        // O AuthenticationManager já verifica isEnabled() e isAccountNonExpired() da entidade User.
+        // BadCredentialsException, DisabledException e LockedException serão capturadas pelo GlobalExceptionHandler.
+        var auth = authenticationManager.authenticate(usernamePassword);
 
-            var usernamePassword =
-                    new UsernamePasswordAuthenticationToken(
-                            data.email(),
-                            data.password()
-                    );
-
-            // O AuthenticationManager já verifica isEnabled() e isAccountNonExpired() da entidade User
-            var auth =
-                    authenticationManager.authenticate(
-                            usernamePassword
-                    );
-
-            User user = (User) auth.getPrincipal();
-
-            return tokenService.generateToken(user);
-
-        } catch (BadCredentialsException ex) {
-
-            throw new BusinessException(
-                    "credentials",
-                    "E-mail ou senha inválidos."
-            );
-        } catch (org.springframework.security.authentication.DisabledException |
-                 org.springframework.security.authentication.LockedException ex) {
-
-            throw new BusinessException(
-                    "account",
-                    "Acesso negado. Esta conta não está ativa ou está bloqueada."
-            );
-        }
+        User user = (User) auth.getPrincipal();
+        return tokenService.generateToken(user);
     }
 }
