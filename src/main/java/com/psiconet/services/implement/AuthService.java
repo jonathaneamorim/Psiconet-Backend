@@ -150,20 +150,13 @@ public class AuthService {
                             data.password()
                     );
 
+            // O AuthenticationManager já verifica isEnabled() e isAccountNonExpired() da entidade User
             var auth =
                     authenticationManager.authenticate(
                             usernamePassword
                     );
 
             User user = (User) auth.getPrincipal();
-
-            if (!UserStatusEnum.ACTIVE.equals(user.getStatus())) {
-
-                throw new BusinessException(
-                        "account",
-                        "Usuário não está ativo."
-                );
-            }
 
             return tokenService.generateToken(user);
 
@@ -172,6 +165,13 @@ public class AuthService {
             throw new BusinessException(
                     "credentials",
                     "E-mail ou senha inválidos."
+            );
+        } catch (org.springframework.security.authentication.DisabledException |
+                 org.springframework.security.authentication.LockedException ex) {
+
+            throw new BusinessException(
+                    "account",
+                    "Acesso negado. Esta conta não está ativa ou está bloqueada."
             );
         }
     }

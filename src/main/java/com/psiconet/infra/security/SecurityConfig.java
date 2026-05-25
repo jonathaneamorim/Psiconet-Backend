@@ -52,6 +52,9 @@ public class SecurityConfig {
                         // Rotas do Swagger
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
+                        // Rotas administrativas protegidas
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
                         // Outras rotas precisam de autenticação
                         .anyRequest().authenticated()
                 )
