@@ -42,10 +42,6 @@ public class SecurityFilter extends OncePerRequestFilter {
                             null,
                             user.getAuthorities()
                     );
-
-                    System.out.println("Authenticated user: " + login);
-                    System.out.println("Authorities: " + user.getAuthorities());
-
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 });
             }

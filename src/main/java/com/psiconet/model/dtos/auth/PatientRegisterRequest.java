@@ -16,6 +16,10 @@ public class PatientRegisterRequest {
     @Email(message = "Formato de e-mail inválido.")
     private String email;
 
+    @NotBlank(message = "O nome completo é obrigatório.")
+    @Size(min = 3, max = 150, message = "O nome completo deve ter entre 3 e 150 caracteres.")
+    private String fullName;
+
     @NotBlank(message = "A senha é obrigatória.")
     @Pattern(
             regexp = "^(?=.*[A-Z])(?=.*\\W).{8,}$",

@@ -11,10 +11,8 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class UserUpdateAdminDTO {
-    @NotBlank(message = "O nome completo é obrigatório.")
     private String fullName;
 
-    @NotBlank(message = "O telefone é obrigatório.")
     private String phone;
 
     @NotNull(message = "O status é obrigatório.")

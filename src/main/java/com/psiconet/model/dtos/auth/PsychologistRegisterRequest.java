@@ -16,6 +16,10 @@ public class PsychologistRegisterRequest  {
     @Email(message = "Formato de e-mail inválido.")
     private String email;
 
+    @NotBlank(message = "O nome completo é obrigatório.")
+    @Size(min = 3, max = 150, message = "O nome completo deve ter entre 3 e 150 caracteres.")
+    private String fullName;
+
     @NotBlank(message = "O CPF é obrigatório.")
     @CPF(message = "CPF inválido.")
     private String cpf;
