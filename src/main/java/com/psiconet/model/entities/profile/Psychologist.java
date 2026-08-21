@@ -11,6 +11,7 @@ import java.util.UUID;
 @Table(name = "psicologo")
 @Getter
 @Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class Psychologist {

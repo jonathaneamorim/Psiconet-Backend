@@ -22,6 +22,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@ToString
 @Table(name = "usuario")
 public class User implements UserDetails {
     @Id
