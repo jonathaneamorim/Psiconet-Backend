@@ -10,6 +10,7 @@ import java.util.UUID;
 @Table(name = "paciente")
 @Getter
 @Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class Patient {

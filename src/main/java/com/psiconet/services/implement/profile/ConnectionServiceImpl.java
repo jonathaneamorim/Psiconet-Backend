@@ -6,11 +6,16 @@ import com.psiconet.mapper.ConnectionMapper;
 import com.psiconet.model.dtos.profile.ActiveConnectionDTO;
 import com.psiconet.model.dtos.profile.ConnectionDTO;
 import com.psiconet.model.entities.access.User;
+import com.psiconet.model.entities.clinical.TreatmentLink;
+import com.psiconet.model.entities.profile.Patient;
 import com.psiconet.model.entities.profile.Psychologist;
 import com.psiconet.model.entities.profile.conection.Connection;
+import com.psiconet.model.enums.RoleEnum;
 import com.psiconet.model.enums.conection.ConectionStatusEnum;
 import com.psiconet.repositories.access.UserRepository;
+import com.psiconet.repositories.clinical.TreatmentLinkRepository;
 import com.psiconet.repositories.profile.ConnectionRepository;
+import com.psiconet.repositories.profile.PatientRepository;
 import com.psiconet.repositories.profile.PsychologistRepository;
 import com.psiconet.services.interfaces.profile.ConnectionService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +26,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +41,8 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final ConnectionRepository connectionRepository;
     private final UserRepository userRepository;
     private final PsychologistRepository psychologistRepository;
+    private final PatientRepository patientRepository;
+    private final TreatmentLinkRepository treatmentLinkRepository;
     private final ConnectionMapper connectionMapper;
 
     @Override
@@ -55,11 +63,18 @@ public class ConnectionServiceImpl implements ConnectionService {
             throw new BusinessException("connection", "Não é possível conectar-se a um administrador.");
         }
 
+        boolean isValidPair = (sender.getRole() == RoleEnum.PATIENT && receiver.getRole() == RoleEnum.PSYCHOLOGIST)
+                || (sender.getRole() == RoleEnum.PSYCHOLOGIST && receiver.getRole() == RoleEnum.PATIENT);
+
+        if (!isValidPair) {
+            throw new BusinessException("connection", "A conexão só pode ocorrer entre um paciente e um psicólogo.");
+        }
+
         Optional<Connection> existing = connectionRepository.findActiveOrPendingBetween(sender, receiver);
 
         if (existing.isPresent()) {
             Connection conn = existing.get();
-            
+
             if (conn.getStatus() == ConectionStatusEnum.PENDING) {
                 return;
             }
@@ -70,11 +85,11 @@ public class ConnectionServiceImpl implements ConnectionService {
 
             if (conn.getStatus() == ConectionStatusEnum.REJECTED) {
                 boolean wasSenderWhoRejected = conn.getReceiver().getId().equals(sender.getId());
-                
+
                 if (!wasSenderWhoRejected) {
                     throw new BusinessException("connection", "Sua solicitação anterior foi rejeitada. Apenas o outro usuário pode iniciar uma nova conexão.");
                 }
-                
+
                 conn.setStatus(ConectionStatusEnum.REMOVED);
                 connectionRepository.save(conn);
             } else {
@@ -103,6 +118,8 @@ public class ConnectionServiceImpl implements ConnectionService {
         connection.setStatus(ConectionStatusEnum.ACCEPTED);
         connection.setAcceptedAt(LocalDateTime.now());
         connectionRepository.save(connection);
+
+        ensureTreatmentLink(connection);
     }
 
     @Override
@@ -129,6 +146,8 @@ public class ConnectionServiceImpl implements ConnectionService {
 
         connection.setStatus(ConectionStatusEnum.REMOVED);
         connectionRepository.save(connection);
+
+        deactivateTreatmentLink(connection);
     }
 
     @Override
@@ -145,15 +164,15 @@ public class ConnectionServiceImpl implements ConnectionService {
         Sort sort = pageable.getSort();
         if (sort.isSorted()) {
             List<Sort.Order> orders = sort.stream()
-                    .map(order -> order.getProperty().equals("connectedAt") 
-                            ? new Sort.Order(order.getDirection(), "acceptedAt") 
+                    .map(order -> order.getProperty().equals("connectedAt")
+                            ? new Sort.Order(order.getDirection(), "acceptedAt")
                             : order)
                     .collect(Collectors.toList());
             pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(orders));
         }
 
         Page<Connection> connections = connectionRepository.findByUserAndStatus(user, ConectionStatusEnum.ACCEPTED, pageable);
-        
+
         if (connections.isEmpty()) {
             return Page.empty(pageable);
         }
@@ -168,12 +187,12 @@ public class ConnectionServiceImpl implements ConnectionService {
                 .collect(Collectors.toMap(p -> p.getUser().getId(), p -> p));
 
         return connections.map(connection -> {
-            User otherUser = connection.getSender().getId().equals(user.getId()) 
-                    ? connection.getReceiver() 
+            User otherUser = connection.getSender().getId().equals(user.getId())
+                    ? connection.getReceiver()
                     : connection.getSender();
-            
+
             Psychologist psychologist = psychologistMap.get(otherUser.getId());
-            
+
             return ActiveConnectionDTO.builder()
                     .connectionId(connection.getId())
                     .connectedAt(connection.getAcceptedAt())
@@ -231,5 +250,68 @@ public class ConnectionServiceImpl implements ConnectionService {
         }
 
         return connection;
+    }
+
+    private void ensureTreatmentLink(Connection connection) {
+        Patient patient = resolvePatient(connection);
+        Psychologist psychologist = resolvePsychologist(connection);
+
+        if (patient == null || psychologist == null) {
+            return;
+        }
+
+        TreatmentLink link = treatmentLinkRepository
+                .findByPatientAndPsychologist(patient, psychologist)
+                .orElse(null);
+
+        if (link == null) {
+            link = new TreatmentLink();
+            link.setPatient(patient);
+            link.setPsychologist(psychologist);
+            link.setStartDate(LocalDate.now());
+            link.setIsActive(true);
+            treatmentLinkRepository.save(link);
+        } else if (!Boolean.TRUE.equals(link.getIsActive())) {
+            link.setIsActive(true);
+            link.setStartDate(LocalDate.now());
+            treatmentLinkRepository.save(link);
+        }
+    }
+
+    private void deactivateTreatmentLink(Connection connection) {
+        Patient patient = resolvePatient(connection);
+        Psychologist psychologist = resolvePsychologist(connection);
+
+        if (patient == null || psychologist == null) {
+            return;
+        }
+
+        treatmentLinkRepository.findByPatientAndPsychologist(patient, psychologist)
+                .ifPresent(link -> {
+                    if (Boolean.TRUE.equals(link.getIsActive())) {
+                        link.setIsActive(false);
+                        treatmentLinkRepository.save(link);
+                    }
+                });
+    }
+
+    private Patient resolvePatient(Connection connection) {
+        User patientUser = connection.getSender().getRole() == RoleEnum.PATIENT
+                ? connection.getSender()
+                : connection.getReceiver();
+
+        if (patientUser.getRole() != RoleEnum.PATIENT) return null;
+
+        return patientRepository.findByUser(patientUser).orElse(null);
+    }
+
+    private Psychologist resolvePsychologist(Connection connection) {
+        User psychologistUser = connection.getSender().getRole() == RoleEnum.PSYCHOLOGIST
+                ? connection.getSender()
+                : connection.getReceiver();
+
+        if (psychologistUser.getRole() != RoleEnum.PSYCHOLOGIST) return null;
+
+        return psychologistRepository.findByUser(psychologistUser).orElse(null);
     }
 }
