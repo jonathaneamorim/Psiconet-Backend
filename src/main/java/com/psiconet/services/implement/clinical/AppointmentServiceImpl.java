@@ -9,6 +9,7 @@ import com.psiconet.model.dtos.clinical.AppointmentDTO;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.model.entities.clinical.Appointment;
 import com.psiconet.model.entities.clinical.TreatmentLink;
+import com.psiconet.model.entities.email.EmailDetails;
 import com.psiconet.model.entities.profile.Patient;
 import com.psiconet.model.entities.profile.Psychologist;
 import com.psiconet.model.enums.RoleEnum;
@@ -20,6 +21,7 @@ import com.psiconet.repositories.clinical.TreatmentLinkRepository;
 import com.psiconet.repositories.profile.PatientRepository;
 import com.psiconet.repositories.profile.PsychologistRepository;
 import com.psiconet.services.interfaces.clinical.AppointmentService;
+import com.psiconet.services.interfaces.email.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +42,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final PatientRepository patientRepository;
     private final PsychologistRepository psychologistRepository;
     private final AppointmentMapper appointmentMapper;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -97,6 +100,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setMeetingType(dto.getMeetingType());
         appointment.setStatus(AppointmentStatusEnum.SCHEDULED);
 
+        emailService.sendMailAppointment(appointment);
+
         if (dto.getMeetingType() == MeetingTypeEnum.VIDEO_CALL) {
             appointment.setMeetingProvider(MeetingProviderEnum.EXTERNAL_LINK);
             appointment.setMeetingLink(dto.getMeetingLink());
@@ -127,6 +132,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new BusinessException("appointment", "Apenas agendamentos pendentes podem ser aceitos.");
         }
 
+        emailService.sendMailConfirmationAppointment(appointment);
         appointment.setStatus(AppointmentStatusEnum.ACCEPTED);
         appointment = appointmentRepository.save(appointment);
 
