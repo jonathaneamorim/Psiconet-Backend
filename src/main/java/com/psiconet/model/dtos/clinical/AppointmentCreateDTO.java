@@ -2,11 +2,13 @@ package com.psiconet.model.dtos.clinical;
 
 import com.psiconet.model.entities.embeddable.Location;
 import com.psiconet.model.enums.clinical.MeetingTypeEnum;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -27,4 +29,7 @@ public class AppointmentCreateDTO {
     private MeetingTypeEnum meetingType;
     private String meetingLink;
     private Location location;
+
+    @DecimalMin("0.0")
+    private BigDecimal price;
 }

@@ -19,11 +19,16 @@ public interface PsychologistMapper {
     @Mapping(target = "description", ignore = true)
     @Mapping(target = "experienceTime", ignore = true)
     @Mapping(target = "specialties", ignore = true)
+    @Mapping(target = "pixKey", ignore = true)
+    @Mapping(target = "paymentTiming", ignore = true)
+    @Mapping(target = "paymentAdvanceValue", ignore = true)
+    @Mapping(target = "paymentAdvanceUnit", ignore = true)
     Psychologist toPsychologist(PsychologistRegisterRequest dto, User user);
 
     @Mapping(target = "id", source = "user.id")
     @Mapping(target = "fullName", source = "user.fullName")
     @Mapping(target = "email", source = "user.email")
+    @Mapping(target = "phone", source = "user.phone")
     @Mapping(target = "photoUrl", source = "user.photoUrl")
     @Mapping(target = "location", source = "user.location")
     @Mapping(target = "role", source = "user.role")
@@ -36,6 +41,10 @@ public interface PsychologistMapper {
     @Mapping(target = "photoUrl", source = "user.photoUrl")
     PsychologistDTO toDto(Psychologist psychologist);
 
+    @Mapping(target = "pixKey", ignore = true)
+    @Mapping(target = "paymentTiming", ignore = true)
+    @Mapping(target = "paymentAdvanceValue", ignore = true)
+    @Mapping(target = "paymentAdvanceUnit", ignore = true)
     Psychologist toEntity(PublicPsychologistDTO publicPsychologistDTO);
 
     @Mapping(target = "fullName", source = "user.fullName")

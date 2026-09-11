@@ -3,6 +3,7 @@ package com.psiconet.model.dtos.profile;
 import com.psiconet.model.enums.RoleEnum;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,4 +25,8 @@ public class ConnectedUserDTO {
     private List<SpecialtyDTO> specialties;
     private Integer experienceTime;
     private String description;
+
+    // Vínculo de tratamento entre o usuário autenticado e este usuário conectado (quando aplicável)
+    private UUID treatmentLinkId;
+    private BigDecimal defaultPrice;
 }

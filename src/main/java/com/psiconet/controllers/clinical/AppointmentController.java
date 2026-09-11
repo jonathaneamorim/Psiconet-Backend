@@ -3,6 +3,7 @@ package com.psiconet.controllers.clinical;
 import com.psiconet.model.dtos.clinical.AppointmentCancelDTO;
 import com.psiconet.model.dtos.clinical.AppointmentCreateDTO;
 import com.psiconet.model.dtos.clinical.AppointmentDTO;
+import com.psiconet.model.dtos.clinical.AppointmentStatsDTO;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.services.interfaces.clinical.AppointmentService;
 import jakarta.validation.Valid;
@@ -31,14 +32,6 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.create(user, dto));
     }
 
-    @PatchMapping("/{id}/accept")
-    public ResponseEntity<AppointmentDTO> accept(
-            @AuthenticationPrincipal User user,
-            @PathVariable UUID id
-    ) {
-        return ResponseEntity.ok(appointmentService.accept(user, id));
-    }
-
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<AppointmentDTO> cancel(
             @AuthenticationPrincipal User user,
@@ -54,5 +47,15 @@ public class AppointmentController {
             @PageableDefault(size = 10) Pageable pageable
     ) {
         return ResponseEntity.ok(appointmentService.listMyAppointments(user, pageable));
+    }
+
+    // Contagem por status das consultas do mês exibido no calendário (ex.: 1 pendente, 2 aceitas...).
+    @GetMapping("/stats")
+    public ResponseEntity<AppointmentStatsDTO> getMonthlyStats(
+            @AuthenticationPrincipal User user,
+            @RequestParam int year,
+            @RequestParam int month
+    ) {
+        return ResponseEntity.ok(appointmentService.getMonthlyStats(user, year, month));
     }
 }

@@ -1,14 +1,17 @@
 package com.psiconet.infra.exceptions;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -140,5 +143,41 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    // Conflito de escrita concorrente (ex.: duas requisições simultâneas aprovando/rejeitando o
+    // mesmo pagamento, ou tentando o mesmo código de redefinição de senha em paralelo) — protegido
+    // por @Version nas entidades sensíveis. Sem esse handler, cairia no handleGeneric como 500.
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
+        log.warn("Conflito de concorrência ao atualizar registro: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "Este registro foi alterado por outra requisição ao mesmo tempo. Atualize a página e tente novamente."
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    // Violação de constraint única/FK no banco (ex.: duas tentativas concorrentes de cadastro com o
+    // mesmo e-mail/CPF passando ambas pela validação de aplicação antes do insert). A constraint do
+    // banco já impede o dado duplicado — aqui só evitamos vazar um 500 genérico para esse caso.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("Violação de integridade de dados: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "Não foi possível concluir a operação: um registro conflitante já existe."
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+        log.warn("Upload rejeitado por exceder o tamanho máximo permitido.");
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                "Arquivo muito grande. Reduza o tamanho e tente novamente."
+        );
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
     }
 }

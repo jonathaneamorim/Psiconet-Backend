@@ -17,6 +17,7 @@ public class PatientMeDTO {
     private UUID id;
     private String fullName;
     private String email;
+    private String phone;
     private String photoUrl;
     private Location location;
     private RoleEnum role;

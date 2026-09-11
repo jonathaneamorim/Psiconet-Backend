@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -32,4 +33,7 @@ public class TreatmentLink {
 
     @Column(name = "ativo")
     private Boolean isActive;
+
+    @Column(name = "preco_padrao")
+    private BigDecimal defaultPrice;
 }
