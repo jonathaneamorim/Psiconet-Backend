@@ -11,6 +11,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -69,6 +70,13 @@ public class Appointment {
     // obrigatório quando cancelledBy = PATIENT, opcional quando PSYCHOLOGIST
     @Column(name = "motivo_cancelamento")
     private String cancellationReason;
+
+    @Column(name = "preco")
+    private BigDecimal price;
+
+    @ManyToOne
+    @JoinColumn(name = "regra_recorrencia_id")
+    private RecurrenceRule recurrenceRule;
 
     @CreationTimestamp
     @Column(name = "criado_em", updatable = false)

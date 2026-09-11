@@ -1,5 +1,6 @@
 package com.psiconet.model.dtos.clinical;
 
+import com.psiconet.model.enums.clinical.AppointmentCancelScopeEnum;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,4 +10,7 @@ public class AppointmentCancelDTO {
     // Obrigatoriedade é validada no service: obrigatório se quem cancela é o paciente,
     // opcional se for o psicólogo.
     private String reason;
+
+    // Nulo é tratado como SINGLE. Só se aplica a consultas geradas por RecurrenceRule.
+    private AppointmentCancelScopeEnum cancelScope;
 }

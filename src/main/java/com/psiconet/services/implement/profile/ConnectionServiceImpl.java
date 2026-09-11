@@ -10,6 +10,7 @@ import com.psiconet.model.entities.clinical.TreatmentLink;
 import com.psiconet.model.entities.profile.Patient;
 import com.psiconet.model.entities.profile.Psychologist;
 import com.psiconet.model.entities.profile.conection.Connection;
+import com.psiconet.model.enums.NotificationType;
 import com.psiconet.model.enums.RoleEnum;
 import com.psiconet.model.enums.conection.ConectionStatusEnum;
 import com.psiconet.repositories.access.UserRepository;
@@ -17,6 +18,7 @@ import com.psiconet.repositories.clinical.TreatmentLinkRepository;
 import com.psiconet.repositories.profile.ConnectionRepository;
 import com.psiconet.repositories.profile.PatientRepository;
 import com.psiconet.repositories.profile.PsychologistRepository;
+import com.psiconet.services.interfaces.NotificationService;
 import com.psiconet.services.interfaces.profile.ConnectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -44,6 +46,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final PatientRepository patientRepository;
     private final TreatmentLinkRepository treatmentLinkRepository;
     private final ConnectionMapper connectionMapper;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -69,6 +72,15 @@ public class ConnectionServiceImpl implements ConnectionService {
         if (!isValidPair) {
             throw new BusinessException("connection", "A conexão só pode ocorrer entre um paciente e um psicólogo.");
         }
+
+        // Trava os dois usuários (sempre na mesma ordem, pelo id, para nunca gerar deadlock entre
+        // duas requisições concorrentes em direções opostas) antes de checar conexão existente.
+        // Sem isso, dois cliques/requisições simultâneas (inclusive A->B e B->A ao mesmo tempo)
+        // poderiam ambas ler "nenhuma conexão" e criar duas solicitações duplicadas.
+        UUID firstLockId = sender.getId().compareTo(receiver.getId()) < 0 ? sender.getId() : receiver.getId();
+        UUID secondLockId = sender.getId().compareTo(receiver.getId()) < 0 ? receiver.getId() : sender.getId();
+        userRepository.findByIdForUpdate(firstLockId);
+        userRepository.findByIdForUpdate(secondLockId);
 
         Optional<Connection> existing = connectionRepository.findActiveOrPendingBetween(sender, receiver);
 
@@ -104,6 +116,14 @@ public class ConnectionServiceImpl implements ConnectionService {
                 .build();
 
         connectionRepository.save(connection);
+
+        notificationService.create(
+                receiver,
+                sender,
+                NotificationType.CONNECTION_REQUESTED,
+                "Novo Pedido de Conexão", sender.getFullName() + " quer se conectar.",
+                "CONNECTION", connection.getId()
+        );
     }
 
     @Override
@@ -193,10 +213,23 @@ public class ConnectionServiceImpl implements ConnectionService {
 
             Psychologist psychologist = psychologistMap.get(otherUser.getId());
 
+            com.psiconet.model.dtos.profile.ConnectedUserDTO connectedUser =
+                    connectionMapper.toConnectedUserDto(otherUser, psychologist);
+
+            Patient linkPatient = resolvePatient(connection);
+            Psychologist linkPsychologist = resolvePsychologist(connection);
+            if (linkPatient != null && linkPsychologist != null) {
+                treatmentLinkRepository.findByPatientAndPsychologist(linkPatient, linkPsychologist)
+                        .ifPresent(link -> {
+                            connectedUser.setTreatmentLinkId(link.getId());
+                            connectedUser.setDefaultPrice(link.getDefaultPrice());
+                        });
+            }
+
             return ActiveConnectionDTO.builder()
                     .connectionId(connection.getId())
                     .connectedAt(connection.getAcceptedAt())
-                    .user(connectionMapper.toConnectedUserDto(otherUser, psychologist))
+                    .user(connectedUser)
                     .build();
         });
     }

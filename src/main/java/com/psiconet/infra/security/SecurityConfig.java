@@ -49,6 +49,10 @@ public class SecurityConfig {
                         // Rotas de autenticação são públicas
                         .requestMatchers("/auth/**").permitAll()
 
+                        // Arquivos públicos (ex.: fotos de perfil) — precisam funcionar em <img src>
+                        // sem token, então ficam fora da autenticação.
+                        .requestMatchers(HttpMethod.GET, "/public/**").permitAll()
+
                         // Rotas do Swagger
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 

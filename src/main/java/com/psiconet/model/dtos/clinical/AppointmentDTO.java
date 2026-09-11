@@ -5,12 +5,14 @@ import com.psiconet.model.enums.RoleEnum;
 import com.psiconet.model.enums.clinical.AppointmentStatusEnum;
 import com.psiconet.model.enums.clinical.MeetingProviderEnum;
 import com.psiconet.model.enums.clinical.MeetingTypeEnum;
+import com.psiconet.model.enums.clinical.RecurrenceFrequencyEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -32,6 +34,9 @@ public class AppointmentDTO {
     private AppointmentStatusEnum status;
     private RoleEnum cancelledBy;
     private String cancellationReason;
+    private BigDecimal price;
+    private UUID recurrenceRuleId;
+    private RecurrenceFrequencyEnum recurrenceFrequency;
     private PersonSummaryDTO patient;
     private PersonSummaryDTO psychologist;
     private LocalDateTime createdAt;
