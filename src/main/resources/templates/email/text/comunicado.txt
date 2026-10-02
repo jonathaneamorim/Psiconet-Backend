@@ -1,0 +1,12 @@
+Olá[# th:if="${nome != ''}"], [(${nome})][/]!
+
+[(${titulo})]
+
+[(${mensagem})]
+
+Este comunicado também está disponível nas notificações da sua conta:
+[(${link})]
+
+--
+Este é um e-mail automático. Não responda — para falar com a equipe, use a opção Suporte na plataforma.
+© [(${anoAtual})] Psiconet — Cuidando da sua saúde mental.

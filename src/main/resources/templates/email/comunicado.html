@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+<body>
+<span th:fragment="previa" th:text="${titulo}">Comunicado</span>
+<td th:fragment="conteudo" style="padding:32px;">
+  <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p>
+  <p style="font-size:17px;font-weight:bold;color:#0f172a;margin:0 0 12px;line-height:24px;" th:text="${titulo}">Título</p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;white-space:pre-line;" th:text="${mensagem}">Mensagem</p>
+  <div th:replace="~{components/botao :: botao(${link}, 'Abrir a Psiconet')}"></div>
+  <p th:replace="~{components/paragrafo :: nota('Este comunicado também está disponível nas notificações da sua conta.')}"></p>
+</td>
+</body>
+</html>

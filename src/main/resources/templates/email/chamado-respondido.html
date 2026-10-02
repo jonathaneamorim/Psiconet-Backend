@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+<body>
+<span th:fragment="previa">Há uma nova resposta no seu chamado de suporte.</span>
+<td th:fragment="conteudo" style="padding:32px;">
+  <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;">
+    A equipe Psiconet respondeu ao seu chamado <strong th:text="${protocolo}">#000123</strong>. Acesse a plataforma para ler a resposta e continuar a conversa.
+  </p>
+  <div th:replace="~{components/botao :: botao(${link}, 'Ver chamado')}"></div>
+  <p th:replace="~{components/paragrafo :: nota('Por privacidade, o conteúdo das mensagens só é exibido dentro da plataforma.')}"></p>
+</td>
+</body>
+</html>

@@ -1,0 +1,12 @@
+Olá[# th:if="${nome != ''}"], [(${nome})][/]!
+
+Um(a) paciente solicitou acesso ao próprio prontuário.
+Acesse a plataforma para analisar a solicitação e registrar sua decisão:
+
+[(${link})]
+
+Por sigilo profissional, nenhum dado do paciente ou do prontuário é enviado por e-mail.
+
+--
+Este é um e-mail automático. Não responda — para falar com a equipe, use a opção Suporte na plataforma.
+© [(${anoAtual})] Psiconet — Cuidando da sua saúde mental.

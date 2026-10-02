@@ -44,6 +44,17 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
+        <!-- Templates de e-mail (apenas o core: sem auto-configuração de views MVC). Escapa HTML por padrão. -->
+        <dependency>
+            <groupId>org.thymeleaf</groupId>
+            <artifactId>thymeleaf</artifactId>
+        </dependency>
+        <!-- Rate limiting (token bucket) — ver docs/decisoes/004-rate-limit.md -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>8.14.0</version>
+        </dependency>
 
         <!-- Carrega o .env da raiz do projeto para as variáveis de ambiente do processo,
              independente de como a aplicação é iniciada (IDE, mvn, jar empacotado). -->

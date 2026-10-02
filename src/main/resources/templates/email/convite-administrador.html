@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+<body>
+<span th:fragment="previa">Uma conta de administrador foi criada para você.</span>
+<td th:fragment="conteudo" style="padding:32px;">
+  <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;">
+    <strong th:text="${convidadoPor}">Um administrador</strong> criou uma conta de <strong>administrador(a)</strong> para você na Psiconet.
+  </p>
+  <table th:replace="~{components/destaque :: destaque('Por segurança, a senha temporária não é enviada por e-mail. Use a senha informada diretamente por quem criou sua conta — você deverá trocá-la no primeiro acesso.')}"></table>
+  <div th:replace="~{components/botao :: botao(${link}, 'Fazer o primeiro acesso')}"></div>
+  <p th:replace="~{components/paragrafo :: nota('Se você não esperava este convite, não acesse o link e avise a equipe Psiconet.')}"></p>
+</td>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+<body>
+<span th:fragment="previa">Use o link para escolher uma nova senha.</span>
+<td th:fragment="conteudo" style="padding:32px;">
+  <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;">
+    Recebemos uma solicitação para redefinir a senha da sua conta na Psiconet. Clique no botão abaixo para escolher uma nova senha:
+  </p>
+  <div th:replace="~{components/botao :: botao(${link}, 'Redefinir senha')}"></div>
+  <p th:replace="~{components/botao :: link-alternativo(${link})}"></p>
+  <p style="font-size:13px;color:#64748b;margin:0 0 8px;line-height:19px;">
+    Este link expira em <strong th:text="${expiracaoMinutos} + ' minutos'">30 minutos</strong> e só pode ser usado uma vez.
+  </p>
+  <p th:replace="~{components/paragrafo :: nota('Se você não solicitou essa alteração, pode ignorar este e-mail com segurança — sua senha continuará a mesma.')}"></p>
+</td>
+</body>
+</html>
