@@ -30,6 +30,8 @@ public class SchemaPatches implements CommandLineRunner {
             // sem isso, os novos tipos (chamados, comunicados, prontuário) seriam recusados pelo banco.
             // A validação do valor continua garantida pelo enum Java (@Enumerated STRING).
             "ALTER TABLE IF EXISTS notifications DROP CONSTRAINT IF EXISTS notifications_type_check",
+            // Mesmo motivo: nova categoria de chamado PRIVACY (Privacidade / LGPD).
+            "ALTER TABLE IF EXISTS chamado DROP CONSTRAINT IF EXISTS chamado_categoria_check",
 
             // SessionNote deixou de ser @OneToOne com a consulta: remove a UNIQUE(agendamento_id) gerada
             // pelo Hibernate (nome hash) — permite registro documental + anotação pessoal na mesma consulta.
@@ -65,6 +67,9 @@ public class SchemaPatches implements CommandLineRunner {
             "CREATE TRIGGER trg_adendo_imutavel BEFORE UPDATE OR DELETE ON anotacao_adendo FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_alteracao()",
             "DROP TRIGGER IF EXISTS trg_log_alteracao_imutavel ON log_alteracao",
             "CREATE TRIGGER trg_log_alteracao_imutavel BEFORE UPDATE OR DELETE ON log_alteracao FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_alteracao()",
+            // Prova de aceite dos documentos legais: só inserção (ADR 013)
+            "DROP TRIGGER IF EXISTS trg_consentimento_imutavel ON consentimento_usuario",
+            "CREATE TRIGGER trg_consentimento_imutavel BEFORE UPDATE OR DELETE ON consentimento_usuario FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_alteracao()",
             "DROP TRIGGER IF EXISTS trg_prontuario_sem_exclusao ON prontuario",
             "CREATE TRIGGER trg_prontuario_sem_exclusao BEFORE DELETE ON prontuario FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_alteracao()",
             "DROP TRIGGER IF EXISTS trg_anotacao_sem_exclusao ON anotacoes_sessao",

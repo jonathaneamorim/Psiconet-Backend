@@ -3,6 +3,7 @@ package com.psiconet.infra.security;
 import com.psiconet.infra.exceptions.ErrorResponse;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.repositories.access.UserRepository;
+import com.psiconet.services.interfaces.legal.ConsentService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,9 +28,16 @@ public class SecurityFilter extends OncePerRequestFilter {
             "/auth/change-password", "/auth/logout", "/users/me"
     );
 
+    // Liberadas com aceite de Termos/Privacidade pendente (ADR 013): é por elas que o aceite acontece.
+    private static final Set<String> CONSENT_PENDING_ALLOWED = Set.of(
+            "/auth/change-password", "/auth/logout", "/auth/logout-all", "/users/me",
+            "/legal/consents", "/legal/consents/status", "/legal/consents/me"
+    );
+
     private final TokenService tokenService;
     private final UserRepository userRepository;
     private final JsonSecurityErrorHandlers errorHandlers;
+    private final ConsentService consentService;
 
     @Override
     protected void doFilterInternal(
@@ -51,15 +59,28 @@ public class SecurityFilter extends OncePerRequestFilter {
             var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            if (user.isMustChangePassword() && !PASSWORD_CHANGE_ALLOWED.contains(pathWithinApplication(request))) {
+            String path = pathWithinApplication(request);
+            if (user.isMustChangePassword() && !PASSWORD_CHANGE_ALLOWED.contains(path)) {
                 errorHandlers.write(response, ErrorResponse.withCode(
                         HttpServletResponse.SC_FORBIDDEN, "PASSWORD_CHANGE_REQUIRED",
                         "Você precisa definir uma nova senha antes de continuar."));
                 return;
             }
+            // Depois da troca de senha (se houver): Termos/Privacidade novos ou nunca aceitos bloqueiam o
+            // restante da API até o aceite. Os documentos em si (/legal/documents) são públicos.
+            if (consentService.isConsentRequired(user) && !isAllowedWithConsentPending(path)) {
+                errorHandlers.write(response, ErrorResponse.withCode(
+                        HttpServletResponse.SC_FORBIDDEN, "CONSENT_REQUIRED",
+                        "Os Termos de Uso ou a Política de Privacidade foram atualizados. Leia e aceite para continuar."));
+                return;
+            }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private static boolean isAllowedWithConsentPending(String path) {
+        return CONSENT_PENDING_ALLOWED.contains(path) || path.equals("/legal/versions") || path.startsWith("/legal/documents/");
     }
 
     private static String pathWithinApplication(HttpServletRequest request) {

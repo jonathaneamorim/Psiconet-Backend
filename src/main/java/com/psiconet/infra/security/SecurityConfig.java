@@ -73,6 +73,9 @@ public class SecurityConfig {
                         // sem token, então ficam fora da autenticação.
                         .requestMatchers(HttpMethod.GET, "/public/**").permitAll()
 
+                        // Documentos legais (Termos, Privacidade, Cookies) e suas versões: públicos (ADR 011)
+                        .requestMatchers(HttpMethod.GET, "/legal/versions", "/legal/documents/**").permitAll()
+
                         // Rotas do Swagger
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 

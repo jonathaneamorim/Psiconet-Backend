@@ -129,6 +129,22 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Documentos legais: fonte única em docs/legal (Markdown versionado), empacotados no jar
+                 em classpath:legal/ e servidos por GET /legal/documents/{slug} (ADR 011). -->
+            <resource>
+                <directory>docs/legal</directory>
+                <targetPath>legal</targetPath>
+                <includes>
+                    <include>termos-de-uso.md</include>
+                    <include>politica-de-privacidade.md</include>
+                    <include>politica-de-cookies.md</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

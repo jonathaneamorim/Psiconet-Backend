@@ -12,6 +12,9 @@ public final class TestData {
 
     public static final String STRONG_PASSWORD = "Senha@Forte1";
 
+    /** Versão vigente de Termos e Privacidade em docs/legal (atualize ao publicar nova versão). */
+    public static final String LEGAL_VERSION = "1.0.0";
+
     private TestData() {}
 
     public static String uniqueEmail(String prefix) {

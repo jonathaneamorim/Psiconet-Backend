@@ -92,6 +92,14 @@ public class User implements UserDetails {
     @Column(name = "ultimo_login_em")
     private Instant lastLoginAt;
 
+    // Versões dos Termos/Privacidade aceitas por último (cópia desnormalizada do histórico em
+    // consentimento_usuario, para o filtro conferir "aceite pendente" sem consulta extra). ADR 013.
+    @Column(name = "versao_termos_aceita", length = 20)
+    private String acceptedTermsVersion;
+
+    @Column(name = "versao_privacidade_aceita", length = 20)
+    private String acceptedPrivacyVersion;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (this.role == null) return Collections.emptyList();

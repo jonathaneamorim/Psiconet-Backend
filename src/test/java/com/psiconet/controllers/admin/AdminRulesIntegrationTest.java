@@ -58,9 +58,20 @@ class AdminRulesIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.mustChangePassword").value(false))
                 .andReturn()).get("token").asText();
 
-        // token antigo morreu; o novo funciona
+        // token antigo morreu; o novo ainda exige o 1º aceite dos Termos/Privacidade (ADR 013)
         mvc.perform(get("/admin/users").header("Authorization", bearer(token))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/admin/users").header("Authorization", bearer(newToken)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("CONSENT_REQUIRED"));
+
+        mvc.perform(post("/legal/consents").header("Authorization", bearer(newToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("acceptTerms", true, "termsVersion", "1.0.0", "privacyVersion", "1.0.0"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.consentRequired").value(false));
         mvc.perform(get("/admin/users").header("Authorization", bearer(newToken))).andExpect(status().isOk());
+        mvc.perform(get("/legal/consents/me").header("Authorization", bearer(newToken)))
+                .andExpect(jsonPath("$[0].source").value("ADMIN_FIRST_ACCESS"));
     }
 
     @Test

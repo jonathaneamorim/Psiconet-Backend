@@ -23,6 +23,8 @@ import com.psiconet.repositories.access.UserRepository;
 import com.psiconet.repositories.profile.PatientRepository;
 import com.psiconet.repositories.profile.PsychologistRepository;
 import com.psiconet.services.interfaces.audit.AuditService;
+import com.psiconet.services.interfaces.legal.ConsentService;
+import com.psiconet.infra.exceptions.BusinessException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,11 +34,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    public static final int MINIMUM_AGE_YEARS = 18;
+    private static final int MAX_AGE_YEARS = 120;
 
     private static final String CPF_CONFLICT_MESSAGE =
             "Não foi possível concluir o cadastro com este CPF. Se você já possui conta, faça login ou recupere sua senha.";
@@ -52,6 +59,7 @@ public class AuthService {
     private final EmailService emailService;
     private final AuditService auditService;
     private final RateLimiterService rateLimiter;
+    private final ConsentService consentService;
 
     private final PatientMapper patientMapper;
     private final PsychologistMapper psychologistMapper;
@@ -75,6 +83,8 @@ public class AuthService {
     @Transactional
     public void registerPatient(PatientRegisterRequest data) {
         String email = normalizeEmail(data.getEmail());
+        consentService.requireCurrentVersions(data.getTermsVersion(), data.getPrivacyVersion());
+        requireMinimumAge(data.getBirthDate());
         validateUserData(email, data.getCpf());
 
         User user = userMapper.toPatientUser(data, RoleEnum.PATIENT);
@@ -82,6 +92,8 @@ public class AuthService {
 
         Patient patient = patientMapper.toPatient(data, user);
         persist(user, () -> patientRepository.saveAndFlush(patient));
+        // Mesma transação: sem prova de aceite não existe conta (e vice-versa).
+        consentService.recordRegistration(user, data.isAcceptHealthData());
 
         emailService.sendWelcome(user.getEmail(), user.getFullName(), "Paciente");
     }
@@ -89,6 +101,8 @@ public class AuthService {
     @Transactional
     public void registerPsychologist(PsychologistRegisterRequest data) {
         String email = normalizeEmail(data.getEmail());
+        consentService.requireCurrentVersions(data.getTermsVersion(), data.getPrivacyVersion());
+        requireMinimumAge(data.getBirthDate());
         validateUserData(email, data.getCpf());
 
         String crp = data.getCrp().trim();
@@ -102,6 +116,7 @@ public class AuthService {
 
         Psychologist psychologist = psychologistMapper.toPsychologist(data, user);
         persist(user, () -> psychologistRepository.saveAndFlush(psychologist));
+        consentService.recordRegistration(user, false);
 
         emailService.sendWelcome(user.getEmail(), user.getFullName(), "Psicólogo(a)");
     }
@@ -134,7 +149,8 @@ public class AuthService {
         userRepository.save(user);
 
         TokenService.IssuedToken issued = tokenService.generateToken(user, data.rememberMeEnabled());
-        return new LoginResponseDTO(issued.token(), issued.expiresAt(), user.getRole(), user.isMustChangePassword());
+        return new LoginResponseDTO(issued.token(), issued.expiresAt(), user.getRole(), user.isMustChangePassword(),
+                consentService.isConsentRequired(user));
     }
 
     /** Invalida todos os tokens do usuário (logout em todos os dispositivos). */
@@ -170,7 +186,8 @@ public class AuthService {
         auditService.record(user, "PASSWORD_CHANGED", "USER", user.getId(), null);
 
         TokenService.IssuedToken issued = tokenService.generateToken(user, false);
-        return new LoginResponseDTO(issued.token(), issued.expiresAt(), user.getRole(), false);
+        return new LoginResponseDTO(issued.token(), issued.expiresAt(), user.getRole(), false,
+                consentService.isConsentRequired(user));
     }
 
     private void ensureCanLogin(User user) {
@@ -186,6 +203,18 @@ public class AuthService {
                     "Sua conta ainda está aguardando verificação. Entre em contato com a administração da Psiconet.");
             default -> throw new AccountStatusException("ACCOUNT_UNAVAILABLE",
                     "Sua conta não está disponível no momento.");
+        }
+    }
+
+    /** Termos de Uso, seção 4.1: cadastro só para maiores de 18 anos (regra a validar com jurídico). */
+    static void requireMinimumAge(LocalDate birthDate) {
+        if (birthDate == null) return; // @NotNull no DTO já responde a ausência
+        if (birthDate.isBefore(LocalDate.now().minusYears(MAX_AGE_YEARS))) {
+            throw new BusinessException("birthDate", "Informe uma data de nascimento válida.");
+        }
+        if (Period.between(birthDate, LocalDate.now()).getYears() < MINIMUM_AGE_YEARS) {
+            throw new BusinessException("birthDate",
+                    "É preciso ter " + MINIMUM_AGE_YEARS + " anos ou mais para se cadastrar na Psiconet.");
         }
     }
 

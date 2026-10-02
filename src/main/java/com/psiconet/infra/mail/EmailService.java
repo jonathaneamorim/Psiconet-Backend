@@ -23,4 +23,7 @@ public interface EmailService {
     void sendRecordAccessRequested(String toEmail, String fullName);
 
     void sendRecordAccessDecided(String toEmail, String fullName, boolean granted);
+
+    /** Nova versão de Termos/Privacidade publicada (só o nome dos documentos; ADR 013). */
+    void sendLegalDocumentsUpdated(String toEmail, String fullName, String documentNames);
 }

@@ -49,6 +49,12 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), errors));
     }
 
+    @ExceptionHandler(LegalVersionOutdatedException.class)
+    public ResponseEntity<ErrorResponse> handleLegalVersionOutdated(LegalVersionOutdatedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.withCode(HttpStatus.CONFLICT.value(), "LEGAL_VERSION_OUTDATED", ex.getMessage()));
+    }
+
     @ExceptionHandler(AccountStatusException.class)
     public ResponseEntity<ErrorResponse> handleAccountStatus(AccountStatusException ex) {
         log.warn("Login recusado pelo status da conta: {}", ex.getCode());

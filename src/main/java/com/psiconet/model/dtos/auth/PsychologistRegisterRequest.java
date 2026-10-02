@@ -38,4 +38,17 @@ public class PsychologistRegisterRequest  {
     @Size(max = 128, message = "Senha muito longa.")
     @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
     private String password;
+
+    // --- Aceite dos documentos legais (ADR 013). As versões são as que o usuário VIU na tela; o
+    // servidor recusa versões desatualizadas. Data/hora, IP e navegador do aceite vêm do servidor. ---
+    @AssertTrue(message = "Para criar a conta, é preciso concordar com os Termos de Uso e a Política de Privacidade.")
+    private boolean acceptTerms;
+
+    @NotBlank(message = "Versão dos Termos de Uso não informada. Recarregue a página.")
+    @Size(max = 20)
+    private String termsVersion;
+
+    @NotBlank(message = "Versão da Política de Privacidade não informada. Recarregue a página.")
+    @Size(max = 20)
+    private String privacyVersion;
 }

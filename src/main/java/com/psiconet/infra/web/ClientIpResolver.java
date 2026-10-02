@@ -50,6 +50,23 @@ public class ClientIpResolver {
         return remote;
     }
 
+    /**
+     * Navegador resumido do cliente. Como o front chama a API pelo servidor, o User-Agent real do
+     * navegador chega em {@code X-Client-User-Agent} — aceito, como o X-Forwarded-For, apenas de
+     * proxy confiável. Retorna só o resumo ({@link UserAgentSummarizer}).
+     */
+    public String resolveUserAgent(HttpServletRequest request) {
+        String forwarded = trustedProxies.contains(request.getRemoteAddr()) ? request.getHeader("X-Client-User-Agent") : null;
+        return UserAgentSummarizer.summarize(forwarded != null && !forwarded.isBlank() ? forwarded : request.getHeader("User-Agent"));
+    }
+
+    public String currentRequestUserAgent() {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
+            return resolveUserAgent(attributes.getRequest());
+        }
+        return null;
+    }
+
     /** IP da requisição HTTP corrente, ou {@code null} fora de uma requisição (jobs agendados). */
     public String currentRequestIp() {
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {

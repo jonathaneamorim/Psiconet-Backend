@@ -6,5 +6,6 @@ public enum TicketCategoryEnum {
     APPOINTMENT,   // Agendamentos
     PAYMENT,       // Cobranças e pagamentos
     TECHNICAL,     // Erro/falha técnica
+    PRIVACY,       // Privacidade / LGPD — canal de exercício dos direitos do titular (art. 18)
     OTHER
 }

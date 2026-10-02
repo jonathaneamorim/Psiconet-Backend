@@ -17,11 +17,14 @@ public enum NotificationType {
     // Prontuário — obrigatórias (prazo de resposta a direito do titular, LGPD art. 18)
     MEDICAL_RECORD_ACCESS_REQUESTED,
     MEDICAL_RECORD_ACCESS_GRANTED,
-    MEDICAL_RECORD_ACCESS_DENIED;
+    MEDICAL_RECORD_ACCESS_DENIED,
+    // Nova versão de Termos/Privacidade — obrigatória (ADR 013)
+    LEGAL_DOCUMENTS_UPDATED;
 
     private static final java.util.Set<NotificationType> MANDATORY = java.util.EnumSet.of(
             TICKET_REPLIED, TICKET_CLOSED, ADMIN_ANNOUNCEMENT,
-            MEDICAL_RECORD_ACCESS_REQUESTED, MEDICAL_RECORD_ACCESS_GRANTED, MEDICAL_RECORD_ACCESS_DENIED
+            MEDICAL_RECORD_ACCESS_REQUESTED, MEDICAL_RECORD_ACCESS_GRANTED, MEDICAL_RECORD_ACCESS_DENIED,
+            LEGAL_DOCUMENTS_UPDATED
     );
 
     /** Notificações que ignoram as preferências do usuário. */

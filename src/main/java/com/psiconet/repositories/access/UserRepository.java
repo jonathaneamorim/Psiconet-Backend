@@ -24,6 +24,7 @@ public interface UserRepository extends JpaRepository<User, UUID>,
     boolean existsByRole(RoleEnum role);
     boolean existsByCpf(String cpf);
     Optional<User> findFirstByBaseAdminTrue();
+    java.util.List<User> findByStatus(com.psiconet.model.enums.UserStatusEnum status);
     java.util.List<User> findByRoleOrderByCreatedAtAsc(RoleEnum role);
 
     // Trava a linha do usuário (SELECT ... FOR UPDATE) pelo resto da transação atual. Usado como

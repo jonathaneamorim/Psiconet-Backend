@@ -34,4 +34,21 @@ public class PatientRegisterRequest {
     @NotNull(message = "A data de nascimento é obrigatória.")
     @Past(message = "A data de nascimento deve estar no passado.")
     private LocalDate birthDate;
+
+    // --- Aceite dos documentos legais (ADR 013). As versões são as que o usuário VIU na tela; o
+    // servidor recusa versões desatualizadas. Data/hora, IP e navegador do aceite vêm do servidor. ---
+    @AssertTrue(message = "Para criar a conta, é preciso concordar com os Termos de Uso e a Política de Privacidade.")
+    private boolean acceptTerms;
+
+    @NotBlank(message = "Versão dos Termos de Uso não informada. Recarregue a página.")
+    @Size(max = 20)
+    private String termsVersion;
+
+    @NotBlank(message = "Versão da Política de Privacidade não informada. Recarregue a página.")
+    @Size(max = 20)
+    private String privacyVersion;
+
+    // Consentimento específico e destacado para dados sensíveis de saúde (LGPD art. 11, I).
+    @AssertTrue(message = "Para usar a Psiconet como paciente, autorize o tratamento dos seus dados de saúde.")
+    private boolean acceptHealthData;
 }

@@ -33,6 +33,10 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         payload.put("cpf", cpf);
         payload.put("birthDate", "1995-05-10");
         payload.put("password", TestData.STRONG_PASSWORD);
+        payload.put("acceptTerms", true);
+        payload.put("acceptHealthData", true);
+        payload.put("termsVersion", TestData.LEGAL_VERSION);
+        payload.put("privacyVersion", TestData.LEGAL_VERSION);
         return payload;
     }
 

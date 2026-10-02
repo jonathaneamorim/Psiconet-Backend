@@ -74,6 +74,9 @@ public abstract class IntegrationTestBase {
         user.setPassword(passwordEncoder.encode(TestData.STRONG_PASSWORD));
         user.setRole(role);
         user.setStatus(status);
+        // Usuários de teste já aceitaram os documentos vigentes (o reaceite tem testes próprios).
+        user.setAcceptedTermsVersion(TestData.LEGAL_VERSION);
+        user.setAcceptedPrivacyVersion(TestData.LEGAL_VERSION);
         user = userRepository.save(user);
 
         if (role == RoleEnum.PATIENT) {

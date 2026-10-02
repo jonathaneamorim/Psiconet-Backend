@@ -65,6 +65,13 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
+    public void sendLegalDocumentsUpdated(String toEmail, String fullName, String documentNames) {
+        publish(toEmail, EmailTemplate.LEGAL_DOCUMENTS_UPDATED, vars(fullName,
+                "documentos", documentNames,
+                "link", frontendUrl + "/accept-terms"));
+    }
+
+    @Override
     public void sendRecordAccessRequested(String toEmail, String fullName) {
         publish(toEmail, EmailTemplate.RECORD_ACCESS_REQUESTED, vars(fullName,
                 "link", frontendUrl + "/notifications"));
