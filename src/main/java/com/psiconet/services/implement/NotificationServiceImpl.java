@@ -58,7 +58,8 @@ public class NotificationServiceImpl implements NotificationService {
             String refType,
             UUID refId
     ) {
-        if (!isCategoryEnabled(recipient, type)) {
+        // Suporte, comunicados e prontuário são obrigatórios: ignoram as preferências.
+        if (!type.isMandatory() && !isCategoryEnabled(recipient, type)) {
             return;
         }
 
@@ -78,10 +79,16 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional(readOnly = true)
     public List<NotificationDTO> listForUser(UUID userId) {
         return repository
-                .findByRecipientIdOrderByCreatedAtDesc(userId)
+                .findTop100ByRecipientIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(mapper::toDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public int markAllAsRead(User user) {
+        return repository.markAllAsRead(user.getId(), LocalDateTime.now());
     }
 
     @Override
@@ -97,7 +104,8 @@ public class NotificationServiceImpl implements NotificationService {
                 .orElseThrow(() -> new EntityNotFoundException(Notification.class, id));
 
         if (!notif.getRecipient().getId().equals(user.getId())) {
-            throw new BusinessException("notification", "Você não tem permissão para acessar esta notificação.");
+            // 404 em vez de 403: não confirma a existência de notificações de terceiros.
+            throw new EntityNotFoundException(Notification.class, id);
         }
 
         if (!notif.isRead()) {

@@ -26,6 +26,8 @@ public interface NotificationService {
 
     void markAsRead(User user, UUID id);
 
+    int markAllAsRead(User user);
+
     NotificationPreferenceDTO getPreferences(User user);
 
     NotificationPreferenceDTO updatePreferences(User user, NotificationPreferenceDTO dto);

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "notifications")
+@Table(name = "notifications", indexes = @Index(name = "idx_notifications_recipient", columnList = "recipient_id, created_at"))
 @Getter
 @Setter
 @Builder
@@ -35,7 +35,12 @@ public class Notification {
     @Enumerated(EnumType.STRING)
     private NotificationType type;
 
+    @Column(length = 150)
     private String title;
+
+    // Comunicados do admin podem ser longos; coluna ampliada por SchemaPatches (era varchar(255)).
+    // Nunca colocar conteúdo clínico aqui.
+    @Column(length = 2000)
     private String message;
 
     private String referenceType;
