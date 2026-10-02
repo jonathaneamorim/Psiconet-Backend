@@ -142,6 +142,11 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- JDK 24+: o Tomcat carrega biblioteca nativa (JEP 472); sem isso a JVM emite avisos
+                         "restricted method" e, em versões futuras, bloqueia o carregamento. -->
+                    <jvmArguments>--enable-native-access=ALL-UNNAMED</jvmArguments>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
