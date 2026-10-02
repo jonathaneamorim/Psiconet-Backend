@@ -51,7 +51,7 @@ public class SecurityFilter extends OncePerRequestFilter {
             var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            if (user.isMustChangePassword() && !PASSWORD_CHANGE_ALLOWED.contains(request.getServletPath())) {
+            if (user.isMustChangePassword() && !PASSWORD_CHANGE_ALLOWED.contains(pathWithinApplication(request))) {
                 errorHandlers.write(response, ErrorResponse.withCode(
                         HttpServletResponse.SC_FORBIDDEN, "PASSWORD_CHANGE_REQUIRED",
                         "Você precisa definir uma nova senha antes de continuar."));
@@ -60,6 +60,12 @@ public class SecurityFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private static String pathWithinApplication(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String context = request.getContextPath();
+        return context != null && !context.isEmpty() && uri.startsWith(context) ? uri.substring(context.length()) : uri;
     }
 
     private Optional<String> recoverToken(HttpServletRequest request) {

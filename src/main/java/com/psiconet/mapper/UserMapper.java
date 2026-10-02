@@ -76,8 +76,6 @@ public interface UserMapper {
 
     @Named("maskCpf")
     default String maskCpf(String cpf) {
-        if (cpf == null || cpf.length() < 11) return cpf;
-        // Format: 123.***.***-45
-        return cpf.substring(0, 3) + ".***.***-" + cpf.substring(9);
+        return com.psiconet.infra.text.CpfMasker.mask(cpf);
     }
 }

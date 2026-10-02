@@ -20,4 +20,6 @@ public class UsersToListAdminDTO {
     private RoleEnum role;
     private UserStatusEnum status;
     private Instant createdAt;
+    private boolean baseAdmin;
+    private Instant lastLoginAt;
 }

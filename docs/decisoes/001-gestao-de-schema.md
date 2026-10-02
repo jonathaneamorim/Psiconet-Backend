@@ -15,7 +15,7 @@ tabelas (chamados, prontuário, auditoria) e novas colunas em tabelas existentes
    `ADD COLUMN ... DEFAULT x NOT NULL`, válido no Postgres com linhas existentes) ou são anuláveis.
 2. **Nenhuma coluna é removida ou renomeada.** Colunas legadas de `SessionNote`
    (`resumo`, `estado_mental`, `tarefas_casa`) e `MedicalRecord` permanecem; os dados são migrados em
-   código, de forma idempotente, para o novo formato criptografado (ver ADR 007) e as colunas antigas
+   código, de forma idempotente, para o novo formato criptografado (ver ADR 008) e as colunas antigas
    são esvaziadas só depois de a cópia criptografada ser gravada e conferida.
 3. Testes passam a rodar em **H2 em memória** (perfil `test`), nunca no Postgres de desenvolvimento.
 4. Backup do banco de dev feito antes da evolução (`pg_dump`), fora do repositório.
