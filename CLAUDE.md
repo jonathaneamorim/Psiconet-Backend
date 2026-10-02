@@ -79,7 +79,8 @@ src/main/resources/templates/email/   layout/, components/, <template>.html, tex
   ⇒ notificação + e-mail (só protocolo). Admin aparece ao usuário como "Equipe Psiconet".
 - **Prontuário** (ADRs 008–010): um por vínculo; só o psicólogo titular lê/edita (vínculo encerrado: leitura + adendos);
   anotações `RECORD` (documental) × `PRIVATE` (pessoal); rascunho → finalizado imutável com hash SHA-256 + nome/CRP;
-  correções por adendo encadeado. Paciente **solicita** acesso; psicólogo libera (somente leitura, prazo/PDF opcionais)
+  correções por adendo encadeado. Psicólogo exporta PDF de guarda (`/medical-records/links/{id}/pdf`, opcional
+  `includePrivateNotes`). Editor aceita alinhamento (center/right) e tamanho de fonte da lista fixa. Paciente **solicita** acesso; psicólogo libera (somente leitura, prazo/PDF opcionais)
   ou nega com justificativa. Tudo em `auditoria_clinica` (hash encadeado, imutável).
 
 ## Padrão de e-mail (ADR 003)

@@ -20,6 +20,11 @@
 - PDF exportado contém identificação, datas (servidor) e hash SHA-256 de cada registro; o hash do
   arquivo vai no cabeçalho `X-Document-SHA256` e na auditoria.
 
+- **PDF de guarda do psicólogo** (`GET /medical-records/links/{id}/pdf`): só o titular (inclusive com
+  vínculo encerrado); por padrão só o registro documental, com `includePrivateNotes=true` inclui as
+  anotações pessoais (identificadas como tal). Rascunhos nunca entram. Toda exportação vai para a auditoria
+  com escopo (C = completo, D = documental) e início do hash do arquivo.
+
 ## Pontos para validação jurídica/CRP
 - Se o paciente tem direito à cópia integral (incluindo anotações pessoais) e em que prazo a resposta
   deve ser dada; se a negativa é admissível e em quais hipóteses (o desenho registra justificativa, mas
