@@ -49,6 +49,15 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
             throw new BusinessException("recurrenceRule", "Você não tem permissão para criar regras neste vínculo.");
         }
 
+        if (!Boolean.TRUE.equals(treatmentLink.getIsActive())) {
+            throw new BusinessException(
+                    "treatmentLinkId",
+                    "Você só pode agendar consultas com pacientes com quem tenha um vínculo de tratamento ativo."
+            );
+        }
+
+        PatientSchedulingGuard.requireSchedulable(treatmentLink.getPatient().getUser());
+
         // Um mesmo vínculo pode ter mais de uma regra ativa simultaneamente
         // (ex.: paciente e psicólogo se encontram 2x por semana, em dias diferentes).
 

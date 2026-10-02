@@ -83,6 +83,8 @@ public class AppointmentServiceImpl implements AppointmentService {
                         "Você só pode agendar consultas com pacientes com quem tenha um vínculo de tratamento ativo."
                 ));
 
+        PatientSchedulingGuard.requireSchedulable(patient.getUser());
+
         if (dto.getStartDateTime().isBefore(LocalDateTime.now())) {
             throw new BusinessException("startDateTime", "A data e hora de início não podem estar no passado.");
         }

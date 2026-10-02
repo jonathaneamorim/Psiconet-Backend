@@ -67,6 +67,13 @@ public class RecurrenceGenerationService {
 
     @Transactional
     public void ensureNextInstance(RecurrenceRule rule) {
+        // Vínculo encerrado ou paciente sem conta ativa: não materializa novas consultas. A regra fica
+        // como está (sem avançar o cursor) e volta a gerar se o vínculo/conta for reativado.
+        if (!Boolean.TRUE.equals(rule.getTreatmentLink().getIsActive())
+                || !PatientSchedulingGuard.canBeScheduled(rule.getTreatmentLink().getPatient().getUser())) {
+            return;
+        }
+
         if (appointmentRepository.existsByRecurrenceRuleAndStatusIn(rule, ACTIVE_STATUSES)) {
             return;
         }
@@ -74,6 +81,12 @@ public class RecurrenceGenerationService {
         LocalDate from = rule.getLastGeneratedUntil() != null
                 ? rule.getLastGeneratedUntil().plusDays(1)
                 : rule.getStartDate();
+
+        // Nunca materializa ocorrências passadas (ex.: série que ficou pausada com o paciente inativo).
+        LocalDate today = LocalDate.now();
+        if (from.isBefore(today)) {
+            from = today;
+        }
 
         LocalDate searchLimit = rule.getEndDate() != null ? rule.getEndDate() : from.plusYears(2);
 
@@ -96,6 +109,10 @@ public class RecurrenceGenerationService {
     private boolean tryGenerateInstance(RecurrenceRule rule, LocalDate date) {
         LocalDateTime start = date.atTime(rule.getStartTime());
         LocalDateTime end = date.atTime(rule.getEndTime());
+
+        if (start.isBefore(LocalDateTime.now())) {
+            return false;
+        }
 
         boolean hasConflict = !appointmentRepository
                 .findConflicting(rule.getTreatmentLink().getPsychologist(), start, end)
