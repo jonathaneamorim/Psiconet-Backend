@@ -1,6 +1,7 @@
 package com.psiconet.services.interfaces.clinical;
 
 import com.psiconet.model.dtos.clinical.record.AccessRequestDTO;
+import com.psiconet.model.dtos.clinical.record.ExportedPdfDTO;
 import com.psiconet.model.dtos.clinical.record.PatientRecordLinkDTO;
 import com.psiconet.model.dtos.clinical.record.PatientRecordViewDTO;
 import com.psiconet.model.entities.access.User;
@@ -13,7 +14,5 @@ public interface PatientMedicalRecordService {
     List<PatientRecordLinkDTO> listMyLinks(User patient);
     AccessRequestDTO requestAccess(User patient, UUID treatmentLinkId);
     PatientRecordViewDTO viewGranted(User patient, UUID accessRequestId);
-    ExportedPdf exportPdf(User patient, UUID accessRequestId);
-
-    record ExportedPdf(byte[] content, String sha256, String fileName) {}
+    ExportedPdfDTO exportPdf(User patient, UUID accessRequestId);
 }

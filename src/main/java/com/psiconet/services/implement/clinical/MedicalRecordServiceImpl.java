@@ -65,6 +65,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     private final RichTextSanitizer richText;
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final MedicalRecordPdfService pdfService;
 
     // ------------------------------------------------------------------ prontuário
 
@@ -332,6 +333,48 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
                 "MEDICAL_RECORD", request.getId());
         emailService.sendRecordAccessDecided(patient.getEmail(), patient.getFullName(), false);
         return support.toAccessDTO(request, true);
+    }
+
+    // ------------------------------------------------------------------ exportação
+
+    @Override
+    @Transactional
+    public ExportedPdfDTO exportPdf(User psychologist, UUID treatmentLinkId, boolean includePrivateNotes) {
+        TreatmentLink link = ownedLink(psychologist, treatmentLinkId);
+        support.ensureAvailable();
+        MedicalRecord r = recordRepository.findFirstByTreatmentLinkOrderByCreatedAtAsc(link)
+                .orElseThrow(() -> new BusinessException("record", "O prontuário deste paciente ainda não foi aberto."));
+
+        // Ordem cronológica de finalização; rascunhos nunca entram no documento
+        List<SessionNoteDTO> notes = noteRepository.findByMedicalRecordOrderByCreatedAtDesc(r).stream()
+                .filter(n -> n.getStatus() == SessionNoteStatusEnum.FINALIZED)
+                .filter(n -> includePrivateNotes || n.getType() == com.psiconet.model.enums.clinical.SessionNoteTypeEnum.RECORD)
+                .sorted(Comparator.comparing(SessionNote::getFinalizedAt))
+                .map(n -> support.toNoteDTO(n, false, true))
+                .toList();
+
+        PatientRecordViewDTO view = new PatientRecordViewDTO(
+                null,
+                patientName(link),
+                link.getPsychologist().getUser().getFullName(),
+                link.getPsychologist().getCrp(),
+                r.getOpeningDate(),
+                support.decrypt(r, recordField(r, "demand"), r.getDemandEncrypted()),
+                support.decrypt(r, recordField(r, "goals"), r.getGoalsEncrypted()),
+                support.decrypt(r, recordField(r, "history"), r.getHistoryEncrypted()),
+                support.decrypt(r, recordField(r, "procedures"), r.getProceduresEncrypted()),
+                support.decrypt(r, recordField(r, "closing"), r.getClosingEncrypted()),
+                notes, null, true);
+
+        UUID exportId = UUID.randomUUID();
+        byte[] pdf = pdfService.render(view, exportId, MedicalRecordPdfService.Audience.PSYCHOLOGIST, includePrivateNotes);
+        String sha256 = ClinicalAuditService.sha256Bytes(pdf);
+        // alvo (máx. 64): id da exportação + escopo (C = completo com anotações pessoais, D = documental) + início do hash
+        audit.record(psychologist, ClinicalAuditActionEnum.PDF_EXPORTED, r.getId(),
+                exportId + (includePrivateNotes ? ":C:" : ":D:") + sha256.substring(0, 16));
+
+        String suffix = includePrivateNotes ? "-completo" : "-documental";
+        return new ExportedPdfDTO(pdf, sha256, "prontuario" + suffix + "-" + exportId.toString().substring(0, 8) + ".pdf");
     }
 
     // ------------------------------------------------------------------ auditoria

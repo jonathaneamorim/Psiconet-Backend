@@ -33,7 +33,14 @@ public class MedicalRecordPdfService {
     private static final Font BODY = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
     private static final Font SMALL = FontFactory.getFont(FontFactory.HELVETICA, 8, MUTED);
 
+    /** Para quem o PDF é gerado: muda título, aviso e a identificação das anotações pessoais. */
+    public enum Audience { PATIENT, PSYCHOLOGIST }
+
     public byte[] render(PatientRecordViewDTO view, UUID exportId) {
+        return render(view, exportId, Audience.PATIENT, false);
+    }
+
+    public byte[] render(PatientRecordViewDTO view, UUID exportId, Audience audience, boolean includesPrivateNotes) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4, 48, 48, 48, 56);
         try {
@@ -50,7 +57,10 @@ public class MedicalRecordPdfService {
             document.addCreator("Psiconet");
             document.open();
 
-            document.add(new Paragraph("Prontuário psicológico — cópia do(a) titular", TITLE));
+            boolean forPsychologist = audience == Audience.PSYCHOLOGIST;
+            document.add(new Paragraph(forPsychologist
+                    ? "Prontuário psicológico — cópia do(a) psicólogo(a) responsável"
+                    : "Prontuário psicológico — cópia do(a) titular", TITLE));
             document.add(spacer(6));
             document.add(meta("Paciente", view.patientName()));
             document.add(meta("Psicólogo(a) responsável", view.psychologistName()
@@ -59,10 +69,17 @@ public class MedicalRecordPdfService {
             document.add(meta("Exportado em", LocalDateTime.now().format(DATE_TIME) + " (horário do servidor)"));
             document.add(meta("Identificador da exportação", exportId.toString()));
             document.add(spacer(8));
-            Paragraph notice = new Paragraph(
-                    "Cópia somente leitura do registro documental, liberada pelo(a) psicólogo(a) a pedido do(a) titular. "
+            String noticeText = !forPsychologist
+                    ? "Cópia somente leitura do registro documental, liberada pelo(a) psicólogo(a) a pedido do(a) titular. "
                             + "Anotações pessoais de trabalho do profissional não integram esta cópia. "
-                            + "Cada registro traz seu hash SHA-256 de integridade.", SMALL);
+                            + "Cada registro traz seu hash SHA-256 de integridade."
+                    : includesPrivateNotes
+                    ? "Cópia de guarda do(a) psicólogo(a), com registro documental e ANOTAÇÕES PESSOAIS de trabalho. "
+                            + "Documento sigiloso: as anotações pessoais não integram a cópia entregue ao paciente. "
+                            + "Cada registro traz seu hash SHA-256 de integridade."
+                    : "Cópia de guarda do(a) psicólogo(a) com o registro documental (sem anotações pessoais). "
+                            + "Cada registro traz seu hash SHA-256 de integridade.";
+            Paragraph notice = new Paragraph(noticeText, SMALL);
             document.add(notice);
 
             section(document, "Avaliação de demanda", view.demand());
@@ -79,7 +96,9 @@ public class MedicalRecordPdfService {
             for (SessionNoteDTO note : view.notes()) {
                 document.add(spacer(8));
                 String when = note.appointmentStart() != null ? "Sessão de " + note.appointmentStart().format(DATE) : "Registro";
-                document.add(new Paragraph(when + (note.title() != null ? " — " + note.title() : ""), LABEL));
+                String kind = note.type() == com.psiconet.model.enums.clinical.SessionNoteTypeEnum.PRIVATE
+                        ? "[Anotação pessoal] " : "";
+                document.add(new Paragraph(kind + when + (note.title() != null ? " — " + note.title() : ""), LABEL));
                 document.add(new Paragraph("Registrado por " + note.authorName()
                         + (note.authorCrp() == null ? "" : " (CRP " + note.authorCrp() + ")")
                         + " em " + (note.finalizedAt() == null ? "—" : note.finalizedAt().format(DATE_TIME)), SMALL));
@@ -139,9 +158,14 @@ public class MedicalRecordPdfService {
                 int level = node.path("attrs").path("level").asInt(1);
                 Paragraph p = inline(node, FontFactory.getFont(FontFactory.HELVETICA_BOLD, level == 1 ? 13 : 11));
                 p.setSpacingBefore(6);
+                p.setAlignment(alignment(node));
                 yield p;
             }
-            case "paragraph" -> inline(node, null);
+            case "paragraph" -> {
+                Paragraph p = inline(node, null);
+                p.setAlignment(alignment(node));
+                yield p;
+            }
             case "bulletList", "orderedList" -> list(node, "orderedList".equals(type));
             default -> null;
         };
@@ -162,6 +186,20 @@ public class MedicalRecordPdfService {
         return list;
     }
 
+    private static int alignment(JsonNode node) {
+        return switch (node.path("attrs").path("textAlign").asText("")) {
+            case "center" -> Element.ALIGN_CENTER;
+            case "right" -> Element.ALIGN_RIGHT;
+            default -> Element.ALIGN_LEFT;
+        };
+    }
+
+    /** Tamanho do editor (px, base 16px) → pontos no PDF (base 10pt). Só valores da whitelist. */
+    private static Float pdfSize(String px) {
+        if (!com.psiconet.infra.richtext.RichTextSanitizer.FONT_SIZES.contains(px)) return null;
+        return Float.parseFloat(px.replace("px", "")) * 10f / 16f;
+    }
+
     private Paragraph inline(JsonNode node, Font baseOverride) {
         Paragraph p = new Paragraph();
         p.setLeading(14);
@@ -171,17 +209,20 @@ public class MedicalRecordPdfService {
                 continue;
             }
             int style = Font.NORMAL;
+            Float sizeFromMark = null;
             for (JsonNode mark : child.path("marks")) {
                 switch (mark.path("type").asText()) {
                     case "bold" -> style |= Font.BOLD;
                     case "italic" -> style |= Font.ITALIC;
                     case "underline" -> style |= Font.UNDERLINE;
+                    case "textStyle" -> sizeFromMark = pdfSize(mark.path("attrs").path("fontSize").asText(""));
                     default -> { }
                 }
             }
+            float size = sizeFromMark != null ? sizeFromMark : baseOverride != null ? baseOverride.getSize() : 10f;
             Font font = baseOverride != null
-                    ? FontFactory.getFont(FontFactory.HELVETICA, baseOverride.getSize(), baseOverride.getStyle() | style)
-                    : FontFactory.getFont(FontFactory.HELVETICA, 10, style);
+                    ? FontFactory.getFont(FontFactory.HELVETICA, size, baseOverride.getStyle() | style)
+                    : FontFactory.getFont(FontFactory.HELVETICA, size, style);
             p.add(new Chunk(child.path("text").asText(), font));
         }
         return p;

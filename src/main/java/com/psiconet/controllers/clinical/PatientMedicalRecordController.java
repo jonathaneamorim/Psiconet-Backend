@@ -2,6 +2,7 @@ package com.psiconet.controllers.clinical;
 
 import com.psiconet.infra.ratelimit.RateLimited;
 import com.psiconet.model.dtos.clinical.record.AccessRequestDTO;
+import com.psiconet.model.dtos.clinical.record.ExportedPdfDTO;
 import com.psiconet.model.dtos.clinical.record.PatientRecordLinkDTO;
 import com.psiconet.model.dtos.clinical.record.PatientRecordViewDTO;
 import com.psiconet.model.entities.access.User;
@@ -47,7 +48,7 @@ public class PatientMedicalRecordController {
     @GetMapping("/access-requests/{requestId}/pdf")
     @RateLimited("clinical-write")
     public ResponseEntity<byte[]> pdf(@AuthenticationPrincipal User user, @PathVariable UUID requestId) {
-        PatientMedicalRecordService.ExportedPdf pdf = service.exportPdf(user, requestId);
+        ExportedPdfDTO pdf = service.exportPdf(user, requestId);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(pdf.fileName()).build().toString())

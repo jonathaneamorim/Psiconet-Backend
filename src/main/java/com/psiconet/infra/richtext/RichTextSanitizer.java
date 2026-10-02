@@ -22,7 +22,9 @@ import java.util.Set;
  * SHA-256 de integridade.
  *
  * <p>Permitido (barra de formatação enxuta): título (heading 1), subtítulo (heading 2), parágrafo,
- * negrito, itálico, sublinhado, lista ordenada, lista não ordenada, quebra de linha.</p>
+ * negrito, itálico, sublinhado, lista ordenada, lista não ordenada, quebra de linha, alinhamento
+ * (esquerda/centro/direita) em parágrafos e títulos e tamanho de fonte (lista fixa de valores —
+ * nunca CSS livre).</p>
  */
 @Component
 public class RichTextSanitizer {
@@ -34,7 +36,13 @@ public class RichTextSanitizer {
     private static final Set<String> BLOCK_CONTAINERS = Set.of("doc", "bulletList", "orderedList", "listItem");
     private static final Set<String> NODES = Set.of(
             "doc", "paragraph", "heading", "text", "bulletList", "orderedList", "listItem", "hardBreak");
-    private static final Set<String> MARKS = Set.of("bold", "italic", "underline");
+    private static final Set<String> MARKS = Set.of("bold", "italic", "underline", "textStyle");
+
+    /** Alinhamentos aceitos. "left" é o padrão e não é armazenado (mantém o JSON canônico enxuto). */
+    public static final Set<String> TEXT_ALIGNS = Set.of("center", "right");
+
+    /** Tamanhos de fonte aceitos (mesma lista do seletor do editor). Ausente = tamanho padrão. */
+    public static final java.util.List<String> FONT_SIZES = java.util.List.of("12px", "14px", "18px", "20px", "24px");
     private static final Map<String, Set<String>> ALLOWED_CHILDREN = Map.of(
             "doc", Set.of("paragraph", "heading", "bulletList", "orderedList"),
             "paragraph", Set.of("text", "hardBreak"),
@@ -112,7 +120,14 @@ public class RichTextSanitizer {
             case "heading" -> {
                 int level = node.path("attrs").path("level").asInt(1);
                 if (level != 1 && level != 2) throw invalid("Use apenas título ou subtítulo.");
-                out.set("attrs", F.objectNode().put("level", level));
+                ObjectNode attrs = F.objectNode().put("level", level);
+                putAlign(attrs, node);
+                out.set("attrs", attrs);
+            }
+            case "paragraph" -> {
+                ObjectNode attrs = F.objectNode();
+                putAlign(attrs, node);
+                if (!attrs.isEmpty()) out.set("attrs", attrs);
             }
             case "orderedList" -> {
                 int start = node.path("attrs").path("start").asInt(1);
@@ -142,14 +157,28 @@ public class RichTextSanitizer {
         ArrayNode out = F.arrayNode();
         if (marks.isMissingNode() || marks.isNull()) return out;
         if (!marks.isArray()) throw invalid("Formatação inválida.");
-        java.util.TreeSet<String> seen = new java.util.TreeSet<>();
+        // Ordenadas por tipo: a mesma formatação sempre gera o mesmo JSON canônico (hash estável)
+        java.util.TreeMap<String, ObjectNode> seen = new java.util.TreeMap<>();
         for (JsonNode mark : marks) {
             String type = mark.path("type").asText("");
             if (!MARKS.contains(type)) throw invalid("Formatação não permitida: " + safe(type));
-            seen.add(type);
+            if ("textStyle".equals(type)) {
+                // Só o tamanho de fonte da lista fixa; qualquer outro estilo (cor, fonte, valor livre) é descartado
+                String size = mark.path("attrs").path("fontSize").asText("");
+                if (FONT_SIZES.contains(size)) {
+                    seen.put(type, F.objectNode().put("type", type).set("attrs", F.objectNode().put("fontSize", size)));
+                }
+                continue;
+            }
+            seen.put(type, F.objectNode().put("type", type));
         }
-        seen.forEach(t -> out.add(F.objectNode().put("type", t)));
+        seen.values().forEach(out::add);
         return out;
+    }
+
+    private static void putAlign(ObjectNode attrs, JsonNode node) {
+        String align = node.path("attrs").path("textAlign").asText("");
+        if (TEXT_ALIGNS.contains(align)) attrs.put("textAlign", align);
     }
 
     private static String safe(String type) {

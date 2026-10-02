@@ -256,4 +256,64 @@ class MedicalRecordIntegrationTest extends IntegrationTestBase {
         mvc.perform(post("/patient/medical-records/links/" + link.getId() + "/access-requests").header("Authorization", bearer(patientToken)))
                 .andExpect(status().isCreated());
     }
+
+    private String pdfText(byte[] pdf) throws Exception {
+        com.lowagie.text.pdf.PdfReader reader = new com.lowagie.text.pdf.PdfReader(pdf);
+        com.lowagie.text.pdf.parser.PdfTextExtractor extractor = new com.lowagie.text.pdf.parser.PdfTextExtractor(reader);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i <= reader.getNumberOfPages(); i++) sb.append(extractor.getTextFromPage(i)).append('\n');
+        reader.close();
+        return sb.toString();
+    }
+
+    @Test
+    void psicologoExportaPdfComOuSemAnotacoesPessoais() throws Exception {
+        mvc.perform(put("/medical-records/links/" + link.getId()).header("Authorization", bearer(psyToken))
+                .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("demand", "Demanda documental")))).andExpect(status().isOk());
+        finalizeNote(createNote("RECORD", "Registro de evolucao visivel").get("id").asText());
+        finalizeNote(createNote("PRIVATE", "Hipotese pessoal reservada").get("id").asText());
+        createNote("RECORD", "Rascunho nunca exportado");
+
+        byte[] documental = mvc.perform(get("/medical-records/links/" + link.getId() + "/pdf").header("Authorization", bearer(psyToken)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andExpect(header().string("Cache-Control", containsString("no-store")))
+                .andExpect(header().string("X-Document-SHA256", matchesPattern("[0-9a-f]{64}")))
+                .andReturn().getResponse().getContentAsByteArray();
+        String textoDocumental = pdfText(documental);
+        assertThat(textoDocumental).contains("Registro de evolucao visivel").doesNotContain("Hipotese pessoal").doesNotContain("Rascunho");
+
+        byte[] completo = mvc.perform(get("/medical-records/links/" + link.getId() + "/pdf").param("includePrivateNotes", "true")
+                        .header("Authorization", bearer(psyToken)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+        String textoCompleto = pdfText(completo);
+        assertThat(textoCompleto).contains("Registro de evolucao visivel").contains("Hipotese pessoal reservada")
+                .contains("Anotação pessoal").doesNotContain("Rascunho");
+
+        // Só o titular exporta; paciente e outro psicólogo não
+        String otherPsy = tokenFor(createUser(RoleEnum.PSYCHOLOGIST, UserStatusEnum.ACTIVE));
+        mvc.perform(get("/medical-records/links/" + link.getId() + "/pdf").header("Authorization", bearer(otherPsy)))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/medical-records/links/" + link.getId() + "/pdf").header("Authorization", bearer(patientToken)))
+                .andExpect(status().isForbidden());
+        assertThat(clinicalAudit.verifyChain()).isTrue();
+    }
+
+    @Test
+    void anotacaoComAlinhamentoETamanhoMantemIntegridade() throws Exception {
+        Map<String, Object> styled = Map.of("type", "doc", "content", List.of(
+                Map.of("type", "paragraph", "attrs", Map.of("textAlign", "center"), "content", List.of(
+                        Map.of("type", "text", "text", "Centralizado grande",
+                                "marks", List.of(Map.of("type", "textStyle", "attrs", Map.of("fontSize", "20px"))))))));
+        String id = body(mvc.perform(post("/medical-records/links/" + link.getId() + "/notes").header("Authorization", bearer(psyToken))
+                        .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("type", "RECORD", "content", styled))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.content.content[0].attrs.textAlign").value("center"))
+                .andExpect(jsonPath("$.content.content[0].content[0].marks[0].attrs.fontSize").value("20px"))
+                .andReturn()).get("id").asText();
+        finalizeNote(id);
+        mvc.perform(get("/medical-records/links/" + link.getId() + "/pdf").header("Authorization", bearer(psyToken)))
+                .andExpect(status().isOk());
+    }
 }

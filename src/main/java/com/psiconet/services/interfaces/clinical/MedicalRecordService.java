@@ -25,5 +25,11 @@ public interface MedicalRecordService {
     AccessRequestDTO grant(User psychologist, UUID requestId, AccessGrantDTO dto);
     AccessRequestDTO deny(User psychologist, UUID requestId, AccessDenyDTO dto);
 
+    /**
+     * PDF de guarda do psicólogo titular: registro documental + registros finalizados e, se pedido,
+     * as anotações pessoais (PRIVATE). Rascunhos nunca entram. Exportação auditada.
+     */
+    ExportedPdfDTO exportPdf(User psychologist, UUID treatmentLinkId, boolean includePrivateNotes);
+
     Page<ClinicalAuditEntryDTO> auditTrail(User psychologist, UUID treatmentLinkId, Pageable pageable);
 }

@@ -65,6 +65,20 @@ public class MedicalRecordController {
         return ResponseEntity.ok(service.auditTrail(user, linkId, pageable));
     }
 
+    /** PDF de guarda do psicólogo; {@code includePrivateNotes=true} inclui as anotações pessoais. */
+    @GetMapping("/links/{linkId}/pdf")
+    @RateLimited("clinical-write")
+    public ResponseEntity<byte[]> exportPdf(@AuthenticationPrincipal User user, @PathVariable UUID linkId,
+                                            @RequestParam(defaultValue = "false") boolean includePrivateNotes) {
+        ExportedPdfDTO pdf = service.exportPdf(user, linkId, includePrivateNotes);
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        org.springframework.http.ContentDisposition.attachment().filename(pdf.fileName()).build().toString())
+                .header("X-Document-SHA256", pdf.sha256())
+                .body(pdf.content());
+    }
+
     @GetMapping("/notes/{noteId}")
     public ResponseEntity<SessionNoteDTO> getNote(@AuthenticationPrincipal User user, @PathVariable UUID noteId) {
         return ResponseEntity.ok(service.getNote(user, noteId));

@@ -5,6 +5,7 @@ import com.psiconet.infra.exceptions.ConflictException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.mail.EmailService;
 import com.psiconet.model.dtos.clinical.record.AccessRequestDTO;
+import com.psiconet.model.dtos.clinical.record.ExportedPdfDTO;
 import com.psiconet.model.dtos.clinical.record.PatientRecordLinkDTO;
 import com.psiconet.model.dtos.clinical.record.PatientRecordViewDTO;
 import com.psiconet.model.dtos.clinical.record.SessionNoteDTO;
@@ -126,7 +127,7 @@ public class PatientMedicalRecordServiceImpl implements PatientMedicalRecordServ
 
     @Override
     @Transactional
-    public ExportedPdf exportPdf(User patient, UUID accessRequestId) {
+    public ExportedPdfDTO exportPdf(User patient, UUID accessRequestId) {
         RecordAccessRequest request = activeGrant(patient, accessRequestId);
         if (!request.isExportAllowed()) {
             throw new BusinessException("export", "A exportação em PDF não foi autorizada nesta liberação.");
@@ -137,7 +138,7 @@ public class PatientMedicalRecordServiceImpl implements PatientMedicalRecordServ
         // O hash do arquivo fica na trilha de auditoria (alvo = id da exportação + hash)
         audit.record(patient, ClinicalAuditActionEnum.PDF_EXPORTED, request.getMedicalRecord().getId(),
                 exportId + ":" + sha256.substring(0, 16));
-        return new ExportedPdf(pdf, sha256, "prontuario-psiconet-" + exportId.toString().substring(0, 8) + ".pdf");
+        return new ExportedPdfDTO(pdf, sha256, "prontuario-psiconet-" + exportId.toString().substring(0, 8) + ".pdf");
     }
 
     // ------------------------------------------------------------------
