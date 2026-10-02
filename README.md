@@ -61,7 +61,7 @@ A segurança é implementada com **Spring Security**, utilizando tokens JWT para
 ---
 
 ## 📝 Contribuição
-Para detalhes técnicos mais profundos sobre a estrutura de arquivos e diretrizes de desenvolvimento, consulte o arquivo [GEMINI.md](./GEMINI.md).
+Para detalhes técnicos mais profundos sobre a estrutura de arquivos e diretrizes de desenvolvimento, consulte o [CLAUDE.md](./CLAUDE.md) e as decisões em [docs/decisoes](./docs/decisoes).
 
 ---
 
