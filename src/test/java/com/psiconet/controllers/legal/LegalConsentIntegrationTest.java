@@ -235,6 +235,15 @@ class LegalConsentIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
+    void respostasDaApiTemCabecalhosDeSeguranca() throws Exception {
+        mvc.perform(get("/legal/versions"))
+                .andExpect(header().string("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"))
+                .andExpect(header().string("Referrer-Policy", "no-referrer"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().exists("Permissions-Policy"));
+    }
+
+    @Test
     void versoesPodemSerCacheadas() throws Exception {
         mvc.perform(get("/legal/versions")).andExpect(header().string("Cache-Control", containsString("max-age")));
     }

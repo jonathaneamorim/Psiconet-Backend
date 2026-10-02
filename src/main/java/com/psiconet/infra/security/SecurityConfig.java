@@ -15,6 +15,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -45,6 +51,21 @@ public class SecurityConfig {
                 // Ativação do contrato no spring
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
+                // Cabeçalhos de segurança (ADR 015). A API só devolve JSON/arquivos: CSP que não permite
+                // nada (exceto no Swagger, que precisa de scripts próprios), sem referrer e sem APIs
+                // sensíveis do navegador. X-Content-Type-Options, X-Frame-Options e Cache-Control já
+                // vêm do Spring Security; HSTS é enviado pelo Spring quando a requisição chega por HTTPS.
+                .headers(headers -> headers
+                        .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                        .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()"))
+                        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
+                                new NegatedRequestMatcher(new OrRequestMatcher(
+                                        new AntPathRequestMatcher("/swagger-ui/**"),
+                                        new AntPathRequestMatcher("/swagger-ui.html"),
+                                        new AntPathRequestMatcher("/v3/api-docs/**"))),
+                                new StaticHeadersWriter("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")))
+                )
+
                 // Desativa CSRF pois estamos usando API stateless com JWT
                 .csrf(AbstractHttpConfigurer::disable)
 
@@ -64,7 +85,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Rotas de autenticação que exigem usuário logado
-                        .requestMatchers("/auth/change-password").authenticated()
+                        .requestMatchers("/auth/change-password", "/auth/logout-all").authenticated()
 
                         // Demais rotas de autenticação são públicas (logout é idempotente sem token)
                         .requestMatchers("/auth/**").permitAll()

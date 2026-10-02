@@ -5,6 +5,8 @@ import com.psiconet.infra.exceptions.ConflictException;
 import com.psiconet.infra.exceptions.EmailAlreadyExistsException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.mail.EmailService;
+import com.psiconet.infra.security.SessionService;
+import com.psiconet.model.enums.access.SessionRevocationReasonEnum;
 import com.psiconet.infra.text.TextSanitizer;
 import com.psiconet.mapper.UserMapper;
 import com.psiconet.model.dtos.admin.*;
@@ -52,6 +54,7 @@ public class AdminServiceImpl implements AdminService {
     private final AuditService auditService;
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final SessionService sessionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -105,6 +108,7 @@ public class AdminServiceImpl implements AdminService {
         if (deactivating) {
             // Derruba as sessões abertas imediatamente (o filtro também barra status != ACTIVE)
             target.setTokenVersion(target.getTokenVersion() + 1);
+            sessionService.revokeAll(target, SessionRevocationReasonEnum.ADMIN);
         }
         userRepository.save(target);
 
@@ -140,6 +144,7 @@ public class AdminServiceImpl implements AdminService {
                 user.setEmail(email);
                 // O subject do JWT é o e-mail: tokens antigos deixam de valer
                 user.setTokenVersion(user.getTokenVersion() + 1);
+                sessionService.revokeAll(user, SessionRevocationReasonEnum.ADMIN);
                 changed.add("e-mail");
             }
         }

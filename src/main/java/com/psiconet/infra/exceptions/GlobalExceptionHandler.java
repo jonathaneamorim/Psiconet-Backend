@@ -49,6 +49,12 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), errors));
     }
 
+    @ExceptionHandler(com.psiconet.infra.security.InvalidSessionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSession(com.psiconet.infra.security.InvalidSessionException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.withCode(HttpStatus.UNAUTHORIZED.value(), "SESSION_EXPIRED", ex.getMessage()));
+    }
+
     @ExceptionHandler(LegalVersionOutdatedException.class)
     public ResponseEntity<ErrorResponse> handleLegalVersionOutdated(LegalVersionOutdatedException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

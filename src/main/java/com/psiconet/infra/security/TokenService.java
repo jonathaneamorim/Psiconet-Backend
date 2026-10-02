@@ -7,27 +7,26 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.psiconet.model.entities.access.User;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
+import java.util.UUID;
 
+/** Emite e valida o token de ACESSO (JWT HS256, curto). A sessão longa é o refresh (SessionService). */
 @Service
+@RequiredArgsConstructor
 public class TokenService {
 
     private static final String ISSUER = "psiconet";
     private static final int MIN_SECRET_LENGTH = 32;
 
+    private final SessionProperties sessionProperties;
+
     @Value("${api.security.token.secret:}")
     private String secret;
-
-    @Value("${api.security.token.expiration_hours:2}")
-    private Integer expirationHours;
-
-    @Value("${api.security.token.remember-me-hours:168}")
-    private Integer rememberMeHours;
 
     private Algorithm algorithm;
 
@@ -44,15 +43,17 @@ public class TokenService {
         algorithm = Algorithm.HMAC256(secret);
     }
 
-    public IssuedToken generateToken(User user, boolean rememberMe) {
-        Instant expiresAt = Instant.now().plus(rememberMe ? rememberMeHours : expirationHours, ChronoUnit.HOURS);
+    public IssuedToken generateAccessToken(User user, UUID sessionId) {
+        Instant now = Instant.now();
+        Instant expiresAt = now.plus(sessionProperties.getAccessToken());
         try {
             String token = JWT.create()
                     .withIssuer(ISSUER)
                     .withSubject(user.getEmail())
                     .withClaim("role", user.getRole().toString())
                     .withClaim("ver", user.getTokenVersion())
-                    .withIssuedAt(Instant.now())
+                    .withClaim("sid", sessionId.toString())
+                    .withIssuedAt(now)
                     .withExpiresAt(expiresAt)
                     .sign(algorithm);
             return new IssuedToken(token, expiresAt);
@@ -61,17 +62,20 @@ public class TokenService {
         }
     }
 
+    /** Assinatura, emissor e expiração conferidos; token sem {@code sid} (formato antigo) é recusado. */
     public Optional<TokenClaims> validate(String token) {
         try {
             DecodedJWT jwt = JWT.require(algorithm).withIssuer(ISSUER).build().verify(token);
             Integer version = jwt.getClaim("ver").asInt();
-            return Optional.of(new TokenClaims(jwt.getSubject(), version == null ? 0 : version));
-        } catch (JWTVerificationException exception) {
+            String sid = jwt.getClaim("sid").asString();
+            if (sid == null) return Optional.empty();
+            return Optional.of(new TokenClaims(jwt.getSubject(), version == null ? 0 : version, UUID.fromString(sid)));
+        } catch (JWTVerificationException | IllegalArgumentException exception) {
             return Optional.empty();
         }
     }
 
     public record IssuedToken(String token, Instant expiresAt) {}
 
-    public record TokenClaims(String subject, int version) {}
+    public record TokenClaims(String subject, int version, UUID sessionId) {}
 }

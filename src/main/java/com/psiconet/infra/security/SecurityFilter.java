@@ -38,6 +38,7 @@ public class SecurityFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final JsonSecurityErrorHandlers errorHandlers;
     private final ConsentService consentService;
+    private final SessionService sessionService;
 
     @Override
     protected void doFilterInternal(
@@ -46,17 +47,21 @@ public class SecurityFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        Optional<User> authenticated = recoverToken(request)
-                .flatMap(tokenService::validate)
-                .flatMap(claims -> userRepository.findByEmail(claims.subject())
-                        // Status e versão conferidos a CADA requisição: inativar/bloquear o usuário ou
-                        // incrementar tokenVersion (logout, troca de senha) invalida o token na hora.
+        Optional<TokenService.TokenClaims> claims = recoverToken(request).flatMap(tokenService::validate);
+        Optional<User> authenticated = claims
+                .flatMap(c -> userRepository.findByEmail(c.subject())
+                        // Status, versão e sessão conferidos a CADA requisição: inativar/bloquear o usuário,
+                        // incrementar tokenVersion (logout geral, troca de senha) ou encerrar a sessão do
+                        // dispositivo (logout) invalida o token na hora.
                         .filter(User::isEnabled)
-                        .filter(user -> user.getTokenVersion() == claims.version()));
+                        .filter(user -> user.getTokenVersion() == c.version())
+                        .filter(user -> sessionService.isActive(c.sessionId(), user)));
 
         if (authenticated.isPresent()) {
             User user = authenticated.get();
             var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+            // Id da sessão do dispositivo, usado pelo logout para encerrar só esta sessão.
+            authentication.setDetails(new SessionDetails(claims.get().sessionId()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             String path = pathWithinApplication(request);

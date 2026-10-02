@@ -2,6 +2,8 @@ package com.psiconet.services.implement;
 
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.mail.EmailService;
+import com.psiconet.infra.security.SessionService;
+import com.psiconet.model.enums.access.SessionRevocationReasonEnum;
 import com.psiconet.model.entities.access.PasswordResetCode;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.repositories.access.PasswordResetCodeRepository;
@@ -34,6 +36,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private final PasswordResetCodeRepository passwordResetCodeRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final SessionService sessionService;
 
     @Value("${psiconet.password-reset.expiration-minutes}")
     private int expirationMinutes;
@@ -90,6 +93,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         user.setTokenVersion(user.getTokenVersion() + 1);
         user.setMustChangePassword(false);
         userRepository.save(user);
+        sessionService.revokeAll(user, SessionRevocationReasonEnum.PASSWORD_CHANGED);
     }
 
     private PasswordResetCode resolveValidToken(String token) {

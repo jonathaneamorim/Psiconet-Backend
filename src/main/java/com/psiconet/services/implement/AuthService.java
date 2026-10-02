@@ -5,7 +5,11 @@ import com.psiconet.infra.exceptions.ConflictException;
 import com.psiconet.infra.exceptions.EmailAlreadyExistsException;
 import com.psiconet.infra.mail.EmailService;
 import com.psiconet.infra.ratelimit.RateLimiterService;
-import com.psiconet.infra.security.TokenService;
+import com.psiconet.infra.security.InvalidSessionException;
+import com.psiconet.infra.security.SessionDetails;
+import com.psiconet.infra.security.SessionService;
+import com.psiconet.model.entities.access.UserSession;
+import com.psiconet.model.enums.access.SessionRevocationReasonEnum;
 import com.psiconet.mapper.PatientMapper;
 import com.psiconet.mapper.PsychologistMapper;
 import com.psiconet.mapper.UserMapper;
@@ -55,7 +59,7 @@ public class AuthService {
     private final PsychologistRepository psychologistRepository;
 
     private final PasswordEncoder passwordEncoder;
-    private final TokenService tokenService;
+    private final SessionService sessionService;
     private final EmailService emailService;
     private final AuditService auditService;
     private final RateLimiterService rateLimiter;
@@ -148,19 +152,32 @@ public class AuthService {
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
 
-        TokenService.IssuedToken issued = tokenService.generateToken(user, data.rememberMeEnabled());
-        return new LoginResponseDTO(issued.token(), issued.expiresAt(), user.getRole(), user.isMustChangePassword(),
-                consentService.isConsentRequired(user));
+        return toResponse(sessionService.start(user, data.rememberMeEnabled()));
     }
 
-    /** Invalida todos os tokens do usuário (logout em todos os dispositivos). */
+    /** "Sair": encerra só a sessão deste dispositivo (o token de acesso dela morre na hora). */
     @Transactional
     public void logout(User user) {
+        if (user == null) return;
+        SessionDetails.currentSessionId().ifPresent(id -> sessionService.revoke(id, SessionRevocationReasonEnum.LOGOUT));
+    }
+
+    /** "Sair de todos os dispositivos": invalida todos os tokens e sessões do usuário. */
+    @Transactional
+    public void logoutAll(User user) {
         if (user == null) return;
         userRepository.findById(user.getId()).ifPresent(managed -> {
             managed.setTokenVersion(managed.getTokenVersion() + 1);
             userRepository.save(managed);
+            sessionService.revokeAll(managed, SessionRevocationReasonEnum.LOGOUT_ALL);
+            auditService.record(managed, "LOGOUT_ALL_DEVICES", "USER", managed.getId(), null);
         });
+    }
+
+    /** Renova a sessão com o refresh token (rotação + detecção de reutilização no SessionService). */
+    @Transactional(noRollbackFor = InvalidSessionException.class)
+    public LoginResponseDTO refresh(String refreshToken) {
+        return toResponse(sessionService.refresh(refreshToken));
     }
 
     /**
@@ -185,9 +202,21 @@ public class AuthService {
 
         auditService.record(user, "PASSWORD_CHANGED", "USER", user.getId(), null);
 
-        TokenService.IssuedToken issued = tokenService.generateToken(user, false);
-        return new LoginResponseDTO(issued.token(), issued.expiresAt(), user.getRole(), false,
-                consentService.isConsentRequired(user));
+        // Todas as sessões caem (inclusive em outros dispositivos); este dispositivo ganha uma nova,
+        // mantendo a escolha de "manter conectado" da sessão atual.
+        boolean rememberMe = SessionDetails.currentSessionId()
+                .flatMap(sessionService::find)
+                .map(UserSession::isRememberMe)
+                .orElse(false);
+        sessionService.revokeAll(user, SessionRevocationReasonEnum.PASSWORD_CHANGED);
+        return toResponse(sessionService.start(user, rememberMe));
+    }
+
+    private LoginResponseDTO toResponse(SessionService.IssuedSession issued) {
+        User user = issued.user();
+        return new LoginResponseDTO(issued.accessToken(), issued.accessExpiresAt(),
+                issued.refreshToken(), issued.refreshExpiresAt(), issued.rememberMe(),
+                user.getRole(), user.isMustChangePassword(), consentService.isConsentRequired(user));
     }
 
     private void ensureCanLogin(User user) {

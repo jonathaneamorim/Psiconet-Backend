@@ -14,7 +14,7 @@ public record AuthenticationDTO(
         @Size(max = 128, message = "Senha muito longa.")
         String password,
 
-        // "Manter conectado": emite token de validade estendida (api.security.token.remember-me-hours)
+        // "Manter conectado neste dispositivo": sessão persistente (psiconet.session.remember-*, ADR 014)
         Boolean rememberMe
 ) {
     public boolean rememberMeEnabled() {

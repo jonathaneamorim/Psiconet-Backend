@@ -8,6 +8,7 @@ import com.psiconet.model.dtos.auth.ForgotPasswordRequestDTO;
 import com.psiconet.model.dtos.auth.LoginResponseDTO;
 import com.psiconet.model.dtos.auth.PatientRegisterRequest;
 import com.psiconet.model.dtos.auth.PsychologistRegisterRequest;
+import com.psiconet.model.dtos.auth.RefreshRequestDTO;
 import com.psiconet.model.dtos.auth.RegisterResponseDTO;
 import com.psiconet.model.dtos.auth.ResetPasswordRequestDTO;
 import com.psiconet.model.dtos.auth.ValidateResetTokenRequestDTO;
@@ -50,9 +51,24 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(data));
     }
 
+    /** Renova a sessão (refresh rotativo, ADR 014). Chamado pelo servidor do front (proxy.ts). */
+    @PostMapping("/refresh")
+    @RateLimited("refresh")
+    public ResponseEntity<LoginResponseDTO> refresh(@Valid @RequestBody RefreshRequestDTO data) {
+        return ResponseEntity.ok(authService.refresh(data.refreshToken()));
+    }
+
+    /** Encerra a sessão deste dispositivo. */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@AuthenticationPrincipal User user) {
         authService.logout(user);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Encerra as sessões de todos os dispositivos. */
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal User user) {
+        authService.logoutAll(user);
         return ResponseEntity.noContent().build();
     }
 
