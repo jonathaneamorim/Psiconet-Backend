@@ -86,6 +86,9 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         User user = resetCode.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
+        // Senha escolhida pelo próprio titular: encerra sessões antigas e dispensa a troca obrigatória.
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        user.setMustChangePassword(false);
         userRepository.save(user);
     }
 

@@ -1,19 +1,21 @@
 package com.psiconet.model.dtos.auth;
 
 import jakarta.validation.constraints.*;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
 
+// Sem campo "role"/"status": o papel é definido pela rota (/register/patient ou /register/psychologist)
+// e o Jackson ignora propriedades desconhecidas — mass assignment de ADMIN é impossível por construção.
 @Getter
 @Setter
 public class PatientRegisterRequest {
 
     @NotBlank(message = "O e-mail é obrigatório.")
     @Email(message = "Formato de e-mail inválido.")
+    @Size(max = 254, message = "E-mail muito longo.")
     private String email;
 
     @NotBlank(message = "O nome completo é obrigatório.")
@@ -21,10 +23,8 @@ public class PatientRegisterRequest {
     private String fullName;
 
     @NotBlank(message = "A senha é obrigatória.")
-    @Pattern(
-            regexp = "^(?=.*[A-Z])(?=.*\\W).{8,}$",
-            message = "A senha deve ter no mínimo 8 caracteres, uma letra maiúscula e um caractere especial."
-    )
+    @Size(max = 128, message = "Senha muito longa.")
+    @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
     private String password;
 
     @NotBlank(message = "O CPF é obrigatório.")

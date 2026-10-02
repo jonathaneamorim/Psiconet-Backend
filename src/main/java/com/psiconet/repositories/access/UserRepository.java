@@ -13,9 +13,13 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
+    boolean existsByEmailIgnoreCase(String email);
     Optional<User> findByEmail(String email);
+    Optional<User> findByEmailIgnoreCase(String email);
     boolean existsByRole(RoleEnum role);
     boolean existsByCpf(String cpf);
+    Optional<User> findFirstByBaseAdminTrue();
+    java.util.List<User> findByRoleOrderByCreatedAtAsc(RoleEnum role);
 
     // Trava a linha do usuário (SELECT ... FOR UPDATE) pelo resto da transação atual. Usado como
     // mutex para serializar fluxos de "checar-depois-inserir" (ex.: conflito de horário de agenda,

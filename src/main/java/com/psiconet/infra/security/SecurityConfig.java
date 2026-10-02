@@ -1,11 +1,13 @@
 package com.psiconet.infra.security;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -23,11 +25,19 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+// Habilita @PreAuthorize nos controllers/services (defesa em profundidade junto às regras de rota).
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     // Filtro responsável por validar o token JWT em cada requisição
     private final SecurityFilter securityFilter;
+    private final JsonSecurityErrorHandlers errorHandlers;
+
+    // Origens permitidas para chamadas diretas do navegador. O frontend chama a API pelo servidor
+    // (Server Actions), então em geral só a própria URL do frontend precisa estar aqui.
+    @Value("${psiconet.cors.allowed-origins:${psiconet.frontend-url}}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -43,10 +53,20 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
+                // Falhas de autenticação/autorização em JSON (401 sem token válido, 403 sem permissão)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(errorHandlers.authenticationEntryPoint())
+                        .accessDeniedHandler(errorHandlers.accessDeniedHandler())
+                )
+
                 // Configuração de autorização das rotas
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Rotas de autenticação são públicas
+
+                        // Rotas de autenticação que exigem usuário logado
+                        .requestMatchers("/auth/change-password").authenticated()
+
+                        // Demais rotas de autenticação são públicas (logout é idempotente sem token)
                         .requestMatchers("/auth/**").permitAll()
 
                         // Arquivos públicos (ex.: fotos de perfil) — precisam funcionar em <img src>
@@ -55,6 +75,9 @@ public class SecurityConfig {
 
                         // Rotas do Swagger
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
+                        // Página de erro interna do Spring (evita 401 mascarando o erro real)
+                        .requestMatchers("/error").permitAll()
 
                         // Rotas administrativas protegidas
                         .requestMatchers("/admin/**").hasRole("ADMIN")
@@ -72,9 +95,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*")); // Libera requisição de qualquer origem
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // Libera todos os verbos
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type")); // Aceita os cabeçalhos
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setExposedHeaders(List.of("Retry-After"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
