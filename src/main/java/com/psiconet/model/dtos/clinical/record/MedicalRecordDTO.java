@@ -11,6 +11,7 @@ import java.util.UUID;
 public record MedicalRecordDTO(
         UUID recordId,
         UUID treatmentLinkId,
+        UUID patientUserId,
         String patientName,
         boolean linkActive,
         boolean opened,

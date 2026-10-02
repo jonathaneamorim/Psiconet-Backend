@@ -102,7 +102,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         support.ensureAvailable();
         Optional<MedicalRecord> record = recordRepository.findFirstByTreatmentLinkOrderByCreatedAtAsc(link);
         if (record.isEmpty()) {
-            return new MedicalRecordDTO(null, link.getId(), patientName(link), active(link), false, active(link),
+            return new MedicalRecordDTO(null, link.getId(), link.getPatient().getUser().getId(), patientName(link), active(link), false, active(link),
                     null, null, null, null, null, null, null, null, null);
         }
         MedicalRecord r = record.get();
@@ -427,7 +427,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
     private MedicalRecordDTO toRecordDTO(MedicalRecord r, TreatmentLink link) {
         return new MedicalRecordDTO(
-                r.getId(), link.getId(), patientName(link), active(link), true, active(link), r.getOpeningDate(),
+                r.getId(), link.getId(), link.getPatient().getUser().getId(), patientName(link), active(link), true, active(link), r.getOpeningDate(),
                 support.decrypt(r, recordField(r, "demand"), r.getDemandEncrypted()),
                 support.decrypt(r, recordField(r, "goals"), r.getGoalsEncrypted()),
                 support.decrypt(r, recordField(r, "history"), r.getHistoryEncrypted()),
