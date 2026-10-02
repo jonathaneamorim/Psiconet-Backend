@@ -29,7 +29,48 @@ public class SchemaPatches implements CommandLineRunner {
             // O Hibernate 6 cria CHECK com os valores do enum na criação da tabela e nunca o atualiza:
             // sem isso, os novos tipos (chamados, comunicados, prontuário) seriam recusados pelo banco.
             // A validação do valor continua garantida pelo enum Java (@Enumerated STRING).
-            "ALTER TABLE IF EXISTS notifications DROP CONSTRAINT IF EXISTS notifications_type_check"
+            "ALTER TABLE IF EXISTS notifications DROP CONSTRAINT IF EXISTS notifications_type_check",
+
+            // SessionNote deixou de ser @OneToOne com a consulta: remove a UNIQUE(agendamento_id) gerada
+            // pelo Hibernate (nome hash) — permite registro documental + anotação pessoal na mesma consulta.
+            """
+            DO $$ DECLARE c record; BEGIN
+              FOR c IN SELECT con.conname FROM pg_constraint con
+                       JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey)
+                       WHERE con.conrelid = 'anotacoes_sessao'::regclass AND con.contype = 'u'
+                         AND a.attname = 'agendamento_id' AND array_length(con.conkey, 1) = 1
+              LOOP EXECUTE format('ALTER TABLE anotacoes_sessao DROP CONSTRAINT %I', c.conname); END LOOP;
+            END $$
+            """,
+
+            // --- Imutabilidade e "sem exclusão física" garantidas também no banco (defesa em profundidade) ---
+            """
+            CREATE OR REPLACE FUNCTION psiconet_bloqueia_alteracao() RETURNS trigger AS $$
+            BEGIN RAISE EXCEPTION 'Operação não permitida: registro imutável em %', TG_TABLE_NAME; END;
+            $$ LANGUAGE plpgsql
+            """,
+            """
+            CREATE OR REPLACE FUNCTION psiconet_bloqueia_anotacao_finalizada() RETURNS trigger AS $$
+            BEGIN
+              IF OLD.situacao = 'FINALIZED' THEN
+                RAISE EXCEPTION 'Anotação finalizada é imutável; registre um adendo.';
+              END IF;
+              RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql
+            """,
+            "DROP TRIGGER IF EXISTS trg_auditoria_clinica_imutavel ON auditoria_clinica",
+            "CREATE TRIGGER trg_auditoria_clinica_imutavel BEFORE UPDATE OR DELETE ON auditoria_clinica FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_alteracao()",
+            "DROP TRIGGER IF EXISTS trg_adendo_imutavel ON anotacao_adendo",
+            "CREATE TRIGGER trg_adendo_imutavel BEFORE UPDATE OR DELETE ON anotacao_adendo FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_alteracao()",
+            "DROP TRIGGER IF EXISTS trg_log_alteracao_imutavel ON log_alteracao",
+            "CREATE TRIGGER trg_log_alteracao_imutavel BEFORE UPDATE OR DELETE ON log_alteracao FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_alteracao()",
+            "DROP TRIGGER IF EXISTS trg_prontuario_sem_exclusao ON prontuario",
+            "CREATE TRIGGER trg_prontuario_sem_exclusao BEFORE DELETE ON prontuario FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_alteracao()",
+            "DROP TRIGGER IF EXISTS trg_anotacao_sem_exclusao ON anotacoes_sessao",
+            "CREATE TRIGGER trg_anotacao_sem_exclusao BEFORE DELETE ON anotacoes_sessao FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_alteracao()",
+            "DROP TRIGGER IF EXISTS trg_anotacao_finalizada ON anotacoes_sessao",
+            "CREATE TRIGGER trg_anotacao_finalizada BEFORE UPDATE ON anotacoes_sessao FOR EACH ROW EXECUTE FUNCTION psiconet_bloqueia_anotacao_finalizada()"
     );
 
     private final DataSource dataSource;

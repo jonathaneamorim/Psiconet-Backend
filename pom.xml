@@ -49,6 +49,12 @@
             <groupId>org.thymeleaf</groupId>
             <artifactId>thymeleaf</artifactId>
         </dependency>
+        <!-- Geração de PDF do prontuário liberado ao paciente (LGPL/MPL) -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>2.0.3</version>
+        </dependency>
         <!-- Rate limiting (token bucket) — ver docs/decisoes/004-rate-limit.md -->
         <dependency>
             <groupId>com.bucket4j</groupId>

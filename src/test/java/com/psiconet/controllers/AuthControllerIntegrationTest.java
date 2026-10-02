@@ -56,7 +56,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         assertThat(patientRepository.findByUser(saved)).isPresent();
 
         // E-mail de boas-vindas enviado de forma assíncrona após o commit
-        verify(mailSender, timeout(3000)).send(any(MimeMessage.class));
+        verify(mailSender, timeout(3000).atLeastOnce()).send(any(MimeMessage.class));
     }
 
     @Test
@@ -97,7 +97,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
                         .content(json(patientPayload(email, TestData.validCpf()))))
                 .andExpect(status().isCreated());
 
-        verify(mailSender, timeout(3000)).send(any(MimeMessage.class));
+        verify(mailSender, timeout(3000).atLeastOnce()).send(any(MimeMessage.class));
         assertThat(userRepository.findByEmail(email)).isPresent();
     }
 

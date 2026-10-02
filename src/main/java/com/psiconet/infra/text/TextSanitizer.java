@@ -34,6 +34,14 @@ public final class TextSanitizer {
         return text.strip();
     }
 
+    /** Remove apenas caracteres de controle (exceto \n e \t) e invisíveis, sem aparar espaços. */
+    public static String stripInvisible(String input) {
+        if (input == null) return null;
+        String text = Normalizer.normalize(input, Normalizer.Form.NFC);
+        text = INVISIBLE.matcher(text).replaceAll("");
+        return CONTROL.matcher(text).replaceAll("");
+    }
+
     /** Linha única (títulos/assuntos): sem quebras e com espaços colapsados. */
     public static String cleanLine(String input) {
         String text = clean(input);

@@ -11,4 +11,13 @@ import java.util.UUID;
 public interface TreatmentLinkRepository extends JpaRepository<TreatmentLink, UUID> {
     Optional<TreatmentLink> findByPatientAndPsychologistAndIsActiveTrue(Patient patient, Psychologist psychologist);
     Optional<TreatmentLink> findByPatientAndPsychologist(Patient patient, Psychologist psychologist);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"patient", "patient.user"})
+    java.util.List<TreatmentLink> findByPsychologist_User_Id(UUID psychologistUserId);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"psychologist", "psychologist.user"})
+    java.util.List<TreatmentLink> findByPatient_User_Id(UUID patientUserId);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"patient", "patient.user", "psychologist", "psychologist.user"})
+    Optional<TreatmentLink> findWithPartiesById(UUID id);
 }

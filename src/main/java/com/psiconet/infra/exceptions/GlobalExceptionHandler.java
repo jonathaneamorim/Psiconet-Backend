@@ -63,6 +63,13 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.withCode(HttpStatus.TOO_MANY_REQUESTS.value(), "RATE_LIMITED", ex.getMessage()));
     }
 
+    @ExceptionHandler(ClinicalUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleClinicalUnavailable(ClinicalUnavailableException ex) {
+        log.error("Requisição clínica recusada: chave-mestra não configurada.");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponse.withCode(HttpStatus.SERVICE_UNAVAILABLE.value(), "CLINICAL_UNAVAILABLE", ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         log.warn("Argumento inválido: {}", ex.getMessage());
