@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <!-- Configuração compartilhada do IntelliJ (pasta .run/ é lida automaticamente).
+       --enable-native-access evita os avisos "restricted method" do Tomcat no JDK 24+. -->
+  <configuration default="false" name="Psiconet Backend" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="psiconet-backend" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.psiconet.PsiconetBackendApplication" />
+    <option name="VM_PARAMETERS" value="--enable-native-access=ALL-UNNAMED" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
