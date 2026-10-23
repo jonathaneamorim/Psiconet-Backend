@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -69,6 +70,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     List<Appointment> findCompletedChargeableWithoutPayment();
 
     Optional<Appointment> findByRoomId(String roomId);
+
+    List<Appointment> findByRoomIdIn(Collection<String> roomIds);
 
     // Consultas na sala integrada que começam em breve e ainda não tiveram lembrete enviado.
     @Query("""

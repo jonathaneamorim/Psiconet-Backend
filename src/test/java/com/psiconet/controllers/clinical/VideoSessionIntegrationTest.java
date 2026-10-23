@@ -271,6 +271,9 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
         assertEquals(patient.getId().toString(), hostBody.get("remoteIdentity").asText());
         assertEquals("wss://video.psiconet.test", hostBody.get("serverUrl").asText());
         assertEquals(15 * 60, hostBody.get("aloneTimeoutSeconds").asLong());
+        // Limite de horário: 60 min após o fim da consulta
+        assertEquals(a.getEndDateTime().plusMinutes(60).truncatedTo(ChronoUnit.SECONDS),
+                LocalDateTime.parse(hostBody.get("hardStopAt").asText()).truncatedTo(ChronoUnit.SECONDS));
         assertEquals("no-store", host.getResponse().getHeader("Cache-Control"));
         assertFalse(host.getResponse().getContentAsString().contains(a.getRoomId()));
 
@@ -380,6 +383,21 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
         when(videoProvider.parseWebhook(any(), any())).thenThrow(new InvalidWebhookSignatureException("x"));
         assertEquals(401, webhook("assinatura-falsa").getResponse().getStatus());
         assertEquals(401, webhook(null).getResponse().getStatus());
+    }
+
+    @Test
+    void corpoGrandeERecusadoCom413AntesDeSerLido() throws Exception {
+        // Webhook público: teto de 64 KB, recusado antes de verificar a assinatura.
+        MvcResult webhook = mvc.perform(post("/webhooks/video").contentType("application/webhook+json")
+                .header("Authorization", "assinado").content(new byte[65 * 1024])).andReturn();
+        assertEquals(413, webhook.getResponse().getStatus());
+        assertEquals("PAYLOAD_TOO_LARGE", body(webhook).get("code").asText());
+        verify(videoProvider, never()).parseWebhook(any(), any());
+
+        // Resto da API (sem arquivo): teto de 2 MB.
+        MvcResult login = mvc.perform(post("/auth/login").contentType("application/json")
+                .content(new byte[3 * 1024 * 1024])).andReturn();
+        assertEquals(413, login.getResponse().getStatus());
     }
 
     @Test

@@ -2,36 +2,64 @@ package com.psiconet.services.implement.video;
 
 import com.psiconet.infra.video.VideoProperties;
 import com.psiconet.infra.video.VideoProvider;
+import com.psiconet.model.entities.clinical.Appointment;
+import com.psiconet.repositories.clinical.AppointmentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Regra "sozinho por 15 min ⇒ desconectado", garantida no servidor com 1 min de folga sobre o front. */
-class VideoAloneParticipantWatchdogTest {
+/**
+ * Regras das salas garantidas no servidor, com 1 min de folga sobre o front: sozinho por 15 min ⇒
+ * desconectado; limite de horário (fim + 60 min) ⇒ sala encerrada para todos.
+ */
+class VideoRoomWatchdogTest {
 
     private static final String ROOM = "psn_sala";
+    /** Relógio em UTC: LocalDateTime.now(clock) = 14:00 no início de cada teste. */
+    private static final LocalDateTime START = LocalDateTime.of(2026, 10, 23, 14, 0);
 
     private final FakeProvider provider = new FakeProvider();
     private final MutableClock clock = new MutableClock(Instant.parse("2026-10-23T14:00:00Z"));
-    private VideoAloneParticipantWatchdog watchdog;
+    private final Map<String, Appointment> appointments = new HashMap<>();
+    private VideoRoomWatchdog watchdog;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() {
         VideoProperties properties = new VideoProperties();
         properties.setAloneTimeout(Duration.ofMinutes(15));
-        watchdog = new VideoAloneParticipantWatchdog(provider, properties, clock);
+        properties.setHardStopAfterEnd(Duration.ofMinutes(60));
+        AppointmentRepository repository = mock(AppointmentRepository.class);
+        when(repository.findByRoomIdIn(any())).thenAnswer(inv -> ((Collection<String>) inv.getArgument(0)).stream()
+                .map(appointments::get).filter(java.util.Objects::nonNull).toList());
+        watchdog = new VideoRoomWatchdog(provider, properties, new VideoJoinWindow(properties), repository, clock);
+        // Sessão longa (termina às 16:00): o limite de horário não interfere nos testes de "sozinho".
+        appointment(ROOM, START.plusHours(2));
+    }
+
+    private void appointment(String roomName, LocalDateTime end) {
+        Appointment a = new Appointment();
+        a.setRoomId(VideoRoomIds.roomIdFromName(roomName).orElseThrow());
+        a.setStartDateTime(end.minusMinutes(50));
+        a.setEndDateTime(end);
+        appointments.put(a.getRoomId(), a);
     }
 
     @Test
@@ -85,6 +113,27 @@ class VideoAloneParticipantWatchdogTest {
     }
 
     @Test
+    void limiteDeHorarioEncerraASalaParaTodosComFolga() {
+        appointment("psn_atrasada", START.minusMinutes(60));    // fim às 13:00 ⇒ limite às 14:00
+        provider.room("psn_atrasada", "paciente", "psicologo");
+
+        watchdog.check();
+        assertTrue(provider.closed.isEmpty(), "dentro da folga o front ainda é quem encerra");
+
+        clock.advance(Duration.ofMinutes(1));
+        watchdog.check();
+        assertEquals(List.of("psn_atrasada"), provider.closed);
+        assertTrue(provider.removed.isEmpty());
+    }
+
+    @Test
+    void salaDaPsiconetSemConsultaEEncerrada() {
+        provider.room("psn_orfa", "alguem");
+        watchdog.check();
+        assertEquals(List.of("psn_orfa"), provider.closed);
+    }
+
+    @Test
     void ignoraSalasQueNaoSaoDaPsiconet() {
         provider.room("outra_sala", "alguem");
         watchdog.check();
@@ -96,6 +145,7 @@ class VideoAloneParticipantWatchdogTest {
     private static final class FakeProvider implements VideoProvider {
         private final Map<String, List<String>> rooms = new HashMap<>();
         private final List<String> removed = new ArrayList<>();
+        private final List<String> closed = new ArrayList<>();
 
         void room(String name, String... identities) {
             rooms.put(name, List.of(identities));
@@ -104,7 +154,7 @@ class VideoAloneParticipantWatchdogTest {
         @Override public String name() { return "fake"; }
         @Override public void ensureRoom(String roomName, int maxParticipants) { }
         @Override public IssuedToken issueToken(String roomName, String identity, int maxParticipants) { return null; }
-        @Override public void closeRoom(String roomName) { rooms.remove(roomName); }
+        @Override public void closeRoom(String roomName) { closed.add(roomName); rooms.remove(roomName); }
 
         @Override
         public List<ActiveRoom> listRooms() {

@@ -56,7 +56,8 @@ infra/
   text/                 TextSanitizer, CpfMasker
   video/                VideoProvider (abstração), VideoProperties (psiconet.video.*), livekit/LiveKitVideoProvider,
                         VideoAccessException (códigos VIDEO_*), InvalidWebhookSignatureException
-  web/                  ClientIpResolver (+ X-Client-User-Agent), UserAgentSummarizer, WebMvcConfig, ClinicalNoStoreFilter
+  web/                  ClientIpResolver (+ X-Client-User-Agent), UserAgentSummarizer, WebMvcConfig, ClinicalNoStoreFilter,
+                        RequestSizeLimitFilter (corpo ≤ 2 MB sem arquivo; webhook de vídeo ≤ 64 KB ⇒ 413)
 mapper/ model/{entities,dtos,enums}/ repositories/ services/{interfaces,implement}/
 src/main/resources/templates/email/   layout/, components/, <template>.html, text/<template>.txt
 docs/legal/                           termos-de-uso.md, politica-de-privacidade.md, politica-de-cookies.md (fonte única),
@@ -68,7 +69,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 - `@AuthenticationPrincipal User user`; **nunca** confiar em `role`/`userId`/`status` vindos do cliente.
 - Erros no formato `ErrorResponse { status, code?, message, timestamp, errors? }`. `code` estável para o front:
   `UNAUTHENTICATED`, `FORBIDDEN`, `PASSWORD_CHANGE_REQUIRED`, `CONSENT_REQUIRED`, `LEGAL_VERSION_OUTDATED`,
-  `SESSION_EXPIRED`, `RATE_LIMITED`, `ACCOUNT_INACTIVE|BLOCKED|PENDING`, `CLINICAL_UNAVAILABLE`,
+  `SESSION_EXPIRED`, `RATE_LIMITED`, `PAYLOAD_TOO_LARGE`, `ACCOUNT_INACTIVE|BLOCKED|PENDING`, `CLINICAL_UNAVAILABLE`,
   `VIDEO_NOT_IN_APP`, `VIDEO_APPOINTMENT_INACTIVE`, `VIDEO_WINDOW_NOT_OPEN`, `VIDEO_WINDOW_CLOSED`, `VIDEO_UNAVAILABLE`.
 - Sucesso com mensagem sempre em JSON (`MessageResponseDTO`) — nunca texto puro (causa do bug do cadastro, ADR 002).
 - Recurso de outro usuário → **404** (anti-IDOR); permissão de papel → 403 via `@PreAuthorize`.
@@ -117,7 +118,9 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   Psicólogo = anfitrião (`POST .../video/end` encerra para todos); paciente aguarda na sala até ele entrar.
 - **Ciclo da sala:** nasce na entrada (`CreateRoom` idempotente); todos saíram ⇒ fecha em 5 s
   (`departure-timeout`); nova entrada reabre. **Sozinho 15 min** (`VIDEO_ALONE_TIMEOUT`) ⇒ o front avisa e
-  desconecta; `VideoAloneParticipantWatchdog` (1 min) remove pelo provedor quem passar do limite + 1 min.
+  desconecta; `VideoRoomWatchdog` (1 min) remove pelo provedor quem passar do limite + 1 min.
+  **Limite de horário** `VIDEO_HARD_STOP_AFTER_END` (fim + 60 min, `hardStopAt` na credencial): o front avisa e
+  sai; o job encerra a sala para todos 1 min depois. Webhook com teto de corpo de 64 KB (413).
 - **Webhook** `POST /webhooks/video` (permitAll + assinatura obrigatória): presença em `log_sessao_video` (imutável,
   idempotente). **Só registra** — não muda status nem pagamento. Primeira entrada do psicólogo ⇒ `VIDEO_PARTICIPANT_JOINED`.
 - **Lembrete:** `VideoSessionReminderService` (1 min) ⇒ `VIDEO_SESSION_REMINDER` + e-mail `lembrete-sessao-video` ~15 min

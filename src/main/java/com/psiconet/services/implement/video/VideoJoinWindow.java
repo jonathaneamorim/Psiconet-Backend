@@ -33,6 +33,13 @@ public class VideoJoinWindow {
         return appointment.getEndDateTime().plus(properties.getJoinClosesAfter());
     }
 
+    /** Encerramento forçado da sala (limite de horário); nunca antes de {@link #closesAt}. */
+    public LocalDateTime hardStopAt(Appointment appointment) {
+        LocalDateTime hardStop = appointment.getEndDateTime().plus(properties.getHardStopAfterEnd());
+        LocalDateTime closes = closesAt(appointment);
+        return hardStop.isAfter(closes) ? hardStop : closes;
+    }
+
     public boolean isOpen(Appointment appointment, LocalDateTime now) {
         return !now.isBefore(opensAt(appointment)) && !now.isAfter(closesAt(appointment));
     }

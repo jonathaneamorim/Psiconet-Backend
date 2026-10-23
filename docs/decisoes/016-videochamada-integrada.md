@@ -77,9 +77,20 @@ changelog da Twilio ("Twilio Video will remain a standalone product"), registros
      `roomId`, credencial nova);
    - **sozinho por `VIDEO_ALONE_TIMEOUT` (15 min) ⇒ desconectado**, esteja esperando a outra pessoa ou
      depois que ela saiu. O front avisa nos 2 últimos minutos e desconecta; o backend garante
-     (`VideoAloneParticipantWatchdog`, a cada 1 min, consulta as salas `psn_*` no provedor e remove pelo
+     (`VideoRoomWatchdog`, a cada 1 min, consulta as salas `psn_*` no provedor e remove pelo
      `RemoveParticipant` quem segue sozinho após o limite + 1 min). Estado em memória, como o rate limit:
      reiniciar a API só recomeça a contagem. A pessoa pode entrar de novo enquanto a janela estiver aberta.
+   - **limite de horário** `VIDEO_HARD_STOP_AFTER_END` (60 min após o fim, nunca antes do fechamento da
+     entrada): a janela só controla a **entrada**, então sem isso uma sessão conectada (ou duas contas
+     combinadas) poderia durar indefinidamente, consumindo o provedor. A credencial traz `hardStopAt`; o front
+     avisa nos 5 últimos minutos e sai; o mesmo job encerra a sala (`DeleteRoom`) 1 min depois. Sala `psn_*`
+     sem consulta correspondente também é encerrada.
+   - **robustez:** cada execução do job tem orçamento de 20 s (o resto fica para a próxima) e os jobs
+     agendados rodam num pool de 3 threads (`spring.task.scheduling.pool.size`), para um provedor lento não
+     atrasar lembretes, ciclo de vida ou pagamentos.
+   - **webhook público com teto de corpo** (`psiconet.video.webhook-max-body-size`, 64 KB): recusado com
+     413 `PAYLOAD_TOO_LARGE` antes de ser lido para a memória (a API é exposta sem proxy). O resto da API tem
+     teto de 2 MB (`psiconet.http.max-body-size`, `RequestSizeLimitFilter`); uploads seguem `spring.servlet.multipart.*`.
    - Verificado contra um LiveKit 1.13.10 local: campos snake_case no Twirp; `ListParticipants` e
      `RemoveParticipant` exigem `roomAdmin` com `room` no token de servidor.
 9. **Webhook** `POST /webhooks/video` (público só no `SecurityConfig`, validado pela assinatura;

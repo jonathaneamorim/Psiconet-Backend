@@ -60,6 +60,12 @@ public class VideoProperties {
     /** Quem fica sozinho na sala por este tempo é desconectado (pelo front; o backend garante com folga). */
     private Duration aloneTimeout = Duration.ofMinutes(15);
 
+    /**
+     * Limite de horário: a sala é encerrada para todos este tempo após o FIM da consulta (nunca antes do
+     * fechamento da entrada). Evita sessões indefinidas consumindo o provedor.
+     */
+    private Duration hardStopAfterEnd = Duration.ofMinutes(60);
+
     /** Disponível de fato: flag ligada e provedor configurado. */
     public boolean isAvailable() {
         return enabled && hasText(url) && hasText(apiKey) && hasText(apiSecret);
