@@ -50,7 +50,8 @@ changelog da Twilio ("Twilio Video will remain a standalone product"), registros
    - só `VIDEO_CALL + IN_APP`, situação `ACCEPTED` ou `COMPLETED` (o job de ciclo de vida conclui a
      consulta no fim do horário, mas a sala segue aberta pela tolerância), nunca `CANCELLED`/`NO_SHOW`;
      vínculo ativo;
-   - **janela:** abre `VIDEO_JOIN_OPENS_BEFORE` (10 min) antes do início e fecha
+   - **janela:** abre `VIDEO_JOIN_OPENS_BEFORE` (30 min; era 10 min até a revisão de 2026-10-23, ampliado
+     para dar tempo de testar câmera/microfone e aguardar com folga) antes do início e fecha
      `VIDEO_JOIN_CLOSES_AFTER` (15 min) após o fim. Fora dela: 409 com `code`
      `VIDEO_WINDOW_NOT_OPEN` (mensagem com o horário de abertura) ou `VIDEO_WINDOW_CLOSED`;
    - rate limit `video-join` (20 / 10 min por usuário e por IP) e log de cada emissão

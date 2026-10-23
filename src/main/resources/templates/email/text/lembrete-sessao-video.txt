@@ -1,6 +1,6 @@
 Olá[# th:if="${nome != ''}"], [(${nome})][/]!
 
-Sua sessão online começa em breve. A sala abre alguns minutos antes do horário marcado.
+Sua sessão online começa em breve. Entre na sala quando estiver pronto(a).
 
 Início: [(${inicio})]
 

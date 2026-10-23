@@ -113,7 +113,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   materializada pela recorrência. `roomId` **nunca** sai em DTO; `AppointmentDTO` expõe `joinOpensAt`/`joinClosesAt`.
 - **Entrada:** `GET /appointments/{id}` e `POST /appointments/{id}/video/join` (rate limit `video-join`): só psicólogo/paciente
   do vínculo (senão 404), `VIDEO_CALL + IN_APP`, `ACCEPTED` ou `COMPLETED` na tolerância, vínculo ativo, dentro da janela
-  (`VIDEO_JOIN_OPENS_BEFORE` 10 min antes do início → `VIDEO_JOIN_CLOSES_AFTER` 15 min após o fim). Token: só
+  (`VIDEO_JOIN_OPENS_BEFORE` 30 min antes do início → `VIDEO_JOIN_CLOSES_AFTER` 15 min após o fim). Token: só
   câmera/microfone, sem dados/tela/gravação/admin, identidade = id do usuário, sem nome/metadados, sala com **máx. 2**.
   Psicólogo = anfitrião (`POST .../video/end` encerra para todos); paciente aguarda na sala até ele entrar.
 - **Ciclo da sala:** nasce na entrada (`CreateRoom` idempotente); todos saíram ⇒ fecha em 5 s

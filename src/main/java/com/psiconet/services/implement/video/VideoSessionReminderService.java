@@ -56,7 +56,7 @@ public class VideoSessionReminderService {
                 null,
                 NotificationType.VIDEO_SESSION_REMINDER,
                 "Sua sessão online começa em breve",
-                "Sua sessão na sala da Psiconet começa em " + startsAt + ". A sala abre alguns minutos antes.",
+                "Sua sessão na sala da Psiconet começa em " + startsAt + ". Entre na sala quando estiver pronto(a).",
                 "APPOINTMENT",
                 appointment.getId()
         );

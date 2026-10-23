@@ -315,9 +315,9 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
 
     @Test
     void janelaDeEntradaAbreAntesEFechaDepoisComTolerancia() throws Exception {
-        // Abre 10 min antes do início (padrão)
-        assertCode(join(inAppStartingIn(30), patientToken), 409, "VIDEO_WINDOW_NOT_OPEN");
-        assertEquals(200, join(inAppStartingIn(9), patientToken).getResponse().getStatus());
+        // Abre 30 min antes do início (padrão)
+        assertCode(join(inAppStartingIn(45), patientToken), 409, "VIDEO_WINDOW_NOT_OPEN");
+        assertEquals(200, join(inAppStartingIn(29), patientToken).getResponse().getStatus());
 
         // Em andamento
         assertEquals(200, join(inAppStartingIn(-20), psyToken).getResponse().getStatus());

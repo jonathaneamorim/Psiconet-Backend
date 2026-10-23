@@ -37,7 +37,7 @@ public class VideoProperties {
     private Duration tokenTtl = Duration.ofMinutes(10);
 
     /** A sala abre este tempo antes do início da consulta... */
-    private Duration joinOpensBefore = Duration.ofMinutes(10);
+    private Duration joinOpensBefore = Duration.ofMinutes(30);
 
     /** ...e fecha este tempo depois do fim. */
     private Duration joinClosesAfter = Duration.ofMinutes(15);
