@@ -10,7 +10,7 @@
 | Tema | O que o sistema faz de fato |
 |---|---|
 | Natureza | **Intermediação tecnológica**: busca de psicólogos, pedido de conexão, vínculo de tratamento, agenda, registro de cobranças, prontuário eletrônico e suporte. A Psiconet **não presta serviço psicológico**. |
-| Atendimento | Presencial (endereço informado) ou on-line por **link externo** colado pelo psicólogo (Google Meet, Zoom etc.). Não há vídeo hospedado pela Psiconet. |
+| Atendimento | Presencial (endereço informado) ou on-line: **Sala Psiconet** (vídeo integrado via provedor SFU/WebRTC — LiveKit, ADR 016; sem gravação) ou **link externo** colado pelo psicólogo (Google Meet, Zoom etc.). |
 | Pagamentos | **Não processados pela plataforma.** O psicólogo cadastra a chave Pix; o paciente paga fora da plataforma e envia o **comprovante** (upload); o psicólogo aprova/rejeita; o paciente pode contestar. |
 | Prontuário | Mantido pelo psicólogo titular do vínculo, **cifrado** (AES-256-GCM por campo, chave por prontuário). Admin nunca vê conteúdo clínico. O paciente **solicita** acesso e o psicólogo libera (leitura/PDF) ou nega. |
 | Suporte | Chamados (protocolo) atendidos pela administração ("Equipe Psiconet"). |
@@ -37,7 +37,7 @@
 | Fontes | Raleway via `next/font/google`, **baixada no build e servida pelo próprio domínio** (sem requisição ao Google em tempo de execução). |
 | Scripts / iframes / embeds / CDNs | **Nenhum** em tempo de execução. |
 | Mapas | Apenas **link de saída** para o Google Maps no detalhe de consulta presencial (o navegador só acessa o Google se o usuário clicar). |
-| Videoconferência | Link externo informado pelo psicólogo; a política do serviço escolhido se aplica. |
+| Videoconferência | **Sala Psiconet:** provedor de vídeo (LiveKit Cloud ou auto-hospedado — `[A PREENCHER: contrato/DPA, região]`) recebe a mídia **em trânsito**, IP/dados técnicos, nome de sala opaco e id interno do usuário; **sem nome, e-mail ou dado clínico; sem gravação**. Navegador conecta direto ao provedor (origens em `VIDEO_CSP_ORIGINS`). O SDK **não grava cookies nem `localStorage`** na configuração usada (verificado no `livekit-client` 2.22.4 / `@livekit/components-react` 2.9.24). **Link externo:** informado pelo psicólogo; a política do serviço escolhido se aplica. |
 | E-mail transacional | Servidor SMTP configurável (`MAIL_HOST`, padrão `smtp.gmail.com`). Se for Google Workspace/Gmail, há **transferência internacional** (ver Política de Privacidade). |
 | Hospedagem/banco | `[A PREENCHER: provedor de hospedagem e região]`. |
 
@@ -68,6 +68,8 @@ Legenda de base legal (LGPD, **validar com jurídico**): *Contrato* = execução
 | Código de redefinição de senha (hash) | `codigo_redefinicao_senha` | Recuperação de acesso | Contrato | Ninguém (hash) | Até expirar/uso (30 min) | Não |
 | **Sessões** (hash do refresh token, IP, navegador resumido, datas) | `sessao_usuario` | Manter login, segurança, revogação | Contrato / LI | Titular (futuro: lista de dispositivos) | Expiração + 6 meses (Marco Civil, art. 15 — validar) | Não |
 | **Consentimentos** (documento, versão, data do servidor, IP, navegador resumido, origem) | `consentimento_usuario` (imutável) | **Prova do aceite** | Obrigação / Exercício de direitos | Titular (histórico) | Enquanto a conta existir + 5 anos | Não |
+| Presença em sessão de vídeo (consulta, usuário, papel, evento, horário) | `log_sessao_video` | Auditoria e detecção de comparecimento (só registro) | Contrato / LI | Restrito (operação) | Mesmo prazo do prontuário (sugestão — validar) | **Sim (saúde: revela atendimento)** |
+| Mídia da sessão de vídeo (áudio/vídeo) | **Não armazenada** — trafega navegador ↔ provedor de vídeo | Realizar a sessão | Contrato + Consentimento específico | As duas partes, em tempo real | **Nenhuma (não gravada)** | Sim |
 | IP para rate limit | Memória (Bucket4j) | Antiabuso | LI | Ninguém (memória volátil) | Minutos | Não |
 | E-mails enviados | Provedor SMTP | Avisos transacionais (nunca conteúdo clínico, texto de chamado ou nome de paciente para psicólogo) | Contrato | Provedor SMTP | Política do provedor | Não |
 

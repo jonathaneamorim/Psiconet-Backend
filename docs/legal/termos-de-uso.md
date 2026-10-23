@@ -1,8 +1,8 @@
 ---
 tipo: TERMS
 titulo: Termos de Uso
-versao: 1.0.0
-vigencia: 2026-10-02
+versao: 1.1.0
+vigencia: 2026-10-23
 ---
 
 > **Minuta técnica — não é aconselhamento jurídico.** Os trechos marcados com `[A PREENCHER]` e
@@ -59,6 +59,7 @@ vigencia: 2026-10-02
 - Respeitar os horários combinados e cancelar com antecedência pelas ferramentas da plataforma.
 - Realizar os pagamentos combinados diretamente com o psicólogo e enviar comprovantes legítimos.
 - Não usar a plataforma em situações de emergência (ver seção 8).
+- Nas sessões por vídeo, participar de um **local privado**, onde terceiros não ouçam nem vejam a sessão, e cuidar da segurança do próprio dispositivo.
 
 ## 6. Responsabilidades do psicólogo
 
@@ -68,7 +69,9 @@ vigencia: 2026-10-02
 
 6.3. O psicólogo deve preservar o **sigilo profissional**, manter o **prontuário** atualizado e atender às solicitações de acesso do paciente nos prazos aplicáveis.
 
-6.4. Os valores, a forma de pagamento (por exemplo, chave Pix) e a política de cobrança são definidos pelo psicólogo, que responde por sua veracidade e pelas obrigações fiscais do serviço que presta.
+6.4. Nas sessões on-line, o psicólogo deve conduzir o atendimento em **ambiente privado** e observar as normas do CFP sobre atendimento mediado por tecnologia, inclusive eventuais exigências de cadastro *(validar com jurídico/CRP)*.
+
+6.5. Os valores, a forma de pagamento (por exemplo, chave Pix) e a política de cobrança são definidos pelo psicólogo, que responde por sua veracidade e pelas obrigações fiscais do serviço que presta.
 
 ## 7. Responsabilidades e limites da Psiconet
 
@@ -76,7 +79,9 @@ vigencia: 2026-10-02
 
 7.2. A Psiconet **não se responsabiliza** por: (a) o conteúdo, a qualidade ou o resultado do atendimento psicológico; (b) acordos financeiros entre paciente e psicólogo; (c) falhas de serviços externos escolhidos pelas partes (videoconferência, banco, Pix); (d) informações falsas fornecidas por usuários. *(Limites de responsabilidade a validar com jurídico, especialmente à luz do Código de Defesa do Consumidor.)*
 
-7.3. A Psiconet pode verificar dados de cadastro (por exemplo, o CRP) e adotar as medidas da seção 11 em caso de irregularidade.
+7.3. **Sala Psiconet (vídeo integrado):** a sessão é transmitida por um provedor de vídeo contratado (ver [Política de Privacidade](/privacy)). A Psiconet **não grava, não transcreve e não armazena** áudio ou vídeo das sessões; registra apenas a presença (entrada e saída) para auditoria. A sala abre perto do horário da consulta e admite somente o psicólogo e o paciente da consulta.
+
+7.4. A Psiconet pode verificar dados de cadastro (por exemplo, o CRP) e adotar as medidas da seção 11 em caso de irregularidade.
 
 ## 8. Não é serviço de emergência
 
@@ -97,7 +102,7 @@ vigencia: 2026-10-02
 
 ## 10. Conduta proibida
 
-É proibido: fornecer dados falsos ou de terceiros; se passar por psicólogo sem habilitação; assediar, discriminar ou ameaçar outros usuários; enviar comprovantes falsos; usar a plataforma para fins ilícitos; tentar acessar dados ou contas de outras pessoas; contornar mecanismos de segurança, limites de uso ou automatizar acessos; enviar código malicioso; copiar ou revender a plataforma.
+É proibido: fornecer dados falsos ou de terceiros; se passar por psicólogo sem habilitação; assediar, discriminar ou ameaçar outros usuários; enviar comprovantes falsos; usar a plataforma para fins ilícitos; tentar acessar dados ou contas de outras pessoas; **gravar, filmar, fotografar ou transmitir a sessão por vídeo sem o consentimento expresso da outra parte**; compartilhar o acesso à sala com terceiros; contornar mecanismos de segurança, limites de uso ou automatizar acessos; enviar código malicioso; copiar ou revender a plataforma.
 
 ## 11. Suporte, suspensão, inativação e encerramento
 
@@ -133,3 +138,4 @@ Estes Termos são regidos pelas leis da República Federativa do Brasil. Fica el
 | Versão | Vigência | Alterações |
 |---|---|---|
 | 1.0.0 | 2026-10-02 | Primeira versão. |
+| 1.1.0 | 2026-10-23 | Sala Psiconet (vídeo integrado): ausência de gravação, ambiente privado e proibição de gravar a sessão sem consentimento. |

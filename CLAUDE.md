@@ -2,12 +2,13 @@
 
 > Fonte oficial de verdade do backend (substitui o antigo `GEMINI.md`, removido).
 > Projeto irmão: **Psiconet-Frontend** (Next.js) — `../Psiconet-Frontend/CLAUDE.md`.
-> Decisões registradas em `docs/decisoes/` (ADRs 000–015). Diagnóstico inicial: `docs/diagnostico-fase0.md`.
+> Decisões registradas em `docs/decisoes/` (ADRs 000–016). Diagnóstico inicial: `docs/diagnostico-fase0.md`.
 > Documentos legais e inventário de dados: `docs/legal/`.
 
 ## Produto
 Psiconet conecta **pacientes** a **psicólogos**: busca, conexão (vínculo), agenda com recorrência,
-cobranças via Pix, notificações, **prontuário eletrônico cifrado** com anotações de sessão,
+cobranças via Pix, notificações, **sessões on-line na Sala Psiconet (vídeo integrado, sem gravação)**,
+**prontuário eletrônico cifrado** com anotações de sessão,
 **chamados de suporte** e **área administrativa** (usuários, administradores, dashboard, comunicados).
 
 ## Stack e versões
@@ -33,6 +34,7 @@ controllers/            REST: AuthController, UserController, NotificationContro
   admin/                AdminController (/admin), AdminTicketController (/admin/tickets)
   support/              TicketController (/tickets)
   legal/                LegalController (/legal: versions, documents/{slug}, consents)
+  video/                VideoController (GET /video/config, POST /webhooks/video)
   clinical/             Appointment, RecurrenceRule, TreatmentLink,
                         MedicalRecordController (/medical-records — psicólogo),
                         PatientMedicalRecordController (/patient/medical-records — paciente)
@@ -51,6 +53,8 @@ infra/
                         TokenService (acesso 15 min, claim sid), SessionService (refresh rotativo), SessionProperties,
                         JsonSecurityErrorHandlers
   text/                 TextSanitizer, CpfMasker
+  video/                VideoProvider (abstração), VideoProperties (psiconet.video.*), livekit/LiveKitVideoProvider,
+                        VideoAccessException (códigos VIDEO_*), InvalidWebhookSignatureException
   web/                  ClientIpResolver (+ X-Client-User-Agent), UserAgentSummarizer, WebMvcConfig, ClinicalNoStoreFilter
 mapper/ model/{entities,dtos,enums}/ repositories/ services/{interfaces,implement}/
 src/main/resources/templates/email/   layout/, components/, <template>.html, text/<template>.txt
@@ -63,7 +67,8 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 - `@AuthenticationPrincipal User user`; **nunca** confiar em `role`/`userId`/`status` vindos do cliente.
 - Erros no formato `ErrorResponse { status, code?, message, timestamp, errors? }`. `code` estável para o front:
   `UNAUTHENTICATED`, `FORBIDDEN`, `PASSWORD_CHANGE_REQUIRED`, `CONSENT_REQUIRED`, `LEGAL_VERSION_OUTDATED`,
-  `SESSION_EXPIRED`, `RATE_LIMITED`, `ACCOUNT_INACTIVE|BLOCKED|PENDING`, `CLINICAL_UNAVAILABLE`.
+  `SESSION_EXPIRED`, `RATE_LIMITED`, `ACCOUNT_INACTIVE|BLOCKED|PENDING`, `CLINICAL_UNAVAILABLE`,
+  `VIDEO_NOT_IN_APP`, `VIDEO_APPOINTMENT_INACTIVE`, `VIDEO_WINDOW_NOT_OPEN`, `VIDEO_WINDOW_CLOSED`, `VIDEO_UNAVAILABLE`.
 - Sucesso com mensagem sempre em JSON (`MessageResponseDTO`) — nunca texto puro (causa do bug do cadastro, ADR 002).
 - Recurso de outro usuário → **404** (anti-IDOR); permissão de papel → 403 via `@PreAuthorize`.
 - Textos livres passam por `TextSanitizer`; mensagens e e-mails em **pt-BR**.
@@ -96,6 +101,28 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   `includePrivateNotes`). Editor aceita alinhamento (center/right) e tamanho de fonte da lista fixa. Paciente **solicita** acesso; psicólogo libera (somente leitura, prazo/PDF opcionais)
   ou nega com justificativa. Tudo em `auditoria_clinica` (hash encadeado, imutável).
 
+## Videochamada — Sala Psiconet (ADR 016)
+- **Arquitetura:** provedor SFU/WebRTC gerenciado (**LiveKit** Cloud ou self-host) atrás de `VideoProvider`. O backend só
+  cria/garante a sala, emite **token curto por participante** e valida webhooks; a mídia vai do navegador ao provedor.
+  Adaptador próprio (JWT HS256 com `java-jwt` + Twirp via `RestClient`) — o SDK Java conflita com o BOM do Boot 3.3.
+- **Agendamento:** `meetingProvider` em `AppointmentCreateDTO`/`RecurrenceRuleCreateDTO` (`IN_APP` | `EXTERNAL_LINK`;
+  omitido = `EXTERNAL_LINK`). Regras em `MeetingFieldsValidator` (link externo só http/https ≤ 255, sem esquema perigoso;
+  `IN_APP` ignora link e exige a flag). `IN_APP` gera `roomId` (128 bits `SecureRandom`) na criação e **em cada ocorrência**
+  materializada pela recorrência. `roomId` **nunca** sai em DTO; `AppointmentDTO` expõe `joinOpensAt`/`joinClosesAt`.
+- **Entrada:** `GET /appointments/{id}` e `POST /appointments/{id}/video/join` (rate limit `video-join`): só psicólogo/paciente
+  do vínculo (senão 404), `VIDEO_CALL + IN_APP`, `ACCEPTED` ou `COMPLETED` na tolerância, vínculo ativo, dentro da janela
+  (`VIDEO_JOIN_OPENS_BEFORE` 10 min antes do início → `VIDEO_JOIN_CLOSES_AFTER` 15 min após o fim). Token: só
+  câmera/microfone, sem dados/tela/gravação/admin, identidade = id do usuário, sem nome/metadados, sala com **máx. 2**.
+  Psicólogo = anfitrião (`POST .../video/end` encerra para todos); paciente aguarda na sala até ele entrar.
+- **Webhook** `POST /webhooks/video` (permitAll + assinatura obrigatória): presença em `log_sessao_video` (imutável,
+  idempotente). **Só registra** — não muda status nem pagamento. Primeira entrada do psicólogo ⇒ `VIDEO_PARTICIPANT_JOINED`.
+- **Lembrete:** `VideoSessionReminderService` (1 min) ⇒ `VIDEO_SESSION_REMINDER` + e-mail `lembrete-sessao-video` ~15 min
+  antes, preferência "agendamento", marcação atômica `lembrete_video_enviado_em`.
+- **Desligar:** `VIDEO_ENABLED=false` (padrão) ou sem `VIDEO_URL`/`VIDEO_API_KEY`/`VIDEO_API_SECRET` ⇒ `GET /video/config`
+  = `false`, `IN_APP` recusado na criação, entrada 503, sem lembretes; link externo segue funcionando.
+- **Não fazemos:** gravação, transcrição ou armazenamento de mídia; chat; compartilhamento de tela. Fuso: `LocalDateTime`
+  do servidor — produção em `America/Sao_Paulo`.
+
 ## Padrão de e-mail (ADR 003)
 - Novo e-mail = item em `EmailTemplate` + `templates/email/<nome>.html` (usa `layout/base` e `components/*`) +
   `templates/email/text/<nome>.txt` + método em `EmailService`. Conteúdo dinâmico **sempre** `th:text` (escapado).
@@ -104,6 +131,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 
 ## Padrão de notificação (ADR 005)
 - `NotificationService.create(recipient, actor, type, title, message, referenceType, referenceId)`.
+- Vídeo: `VIDEO_SESSION_REMINDER`, `VIDEO_PARTICIPANT_JOINED` (categoria "agendamento"; `referenceType = APPOINTMENT`).
 - `referenceType`: `APPOINTMENT`, `CONNECTION`, `PAYMENT`, `TICKET`, `ANNOUNCEMENT`, `MEDICAL_RECORD`, `LEGAL` (o front roteia por ele).
 - Tipos obrigatórios (`NotificationType.isMandatory()`): chamados, comunicados, prontuário e `LEGAL_DOCUMENTS_UPDATED` — ignoram preferências.
 - Mensagens nunca contêm conteúdo clínico.
@@ -112,7 +140,8 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 - `@RateLimited("politica")` no endpoint; limites **só** em `psiconet.rate-limit.policies.*` (application.properties).
 - Conta por IP (X-Forwarded-For aceito apenas de `TRUSTED_PROXIES`) e por usuário; 429 + `Retry-After`.
 - Políticas: `login`, `login-account`, `register`, `forgot-password`, `reset-password`, `refresh`, `change-password`, `ticket-open`,
-  `ticket-message`, `record-access-request`, `admin-announcement`, `admin-user-write`, `clinical-write`.
+  `ticket-message`, `record-access-request`, `admin-announcement`, `admin-user-write`, `clinical-write`, `video-join`,
+  `video-webhook`.
 
 ## Legal e Privacidade (ADRs 011–015)
 - **Documentos** (minutas, com `[A PREENCHER]`): `docs/legal/*.md` com cabeçalho `tipo/titulo/versao/vigencia` e
@@ -129,7 +158,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   (prontuário tem guarda obrigatória). Procedimento de incidentes: ADR 015.
 
 ## Segurança e LGPD
-- Segredos só por ambiente (`JWT_SECRET` ≥ 32 chars obrigatório; `CLINICAL_MASTER_KEYS`; `ADMIN_*`; SMTP).
+- Segredos só por ambiente (`JWT_SECRET` ≥ 32 chars obrigatório; `CLINICAL_MASTER_KEYS`; `ADMIN_*`; SMTP; `VIDEO_API_SECRET`).
 - Dados clínicos: AES-256-GCM por campo, DEK por prontuário, KEK versionada fora do banco; sem chave → 503.
   Respostas clínicas com `Cache-Control: no-store`. Triggers no Postgres bloqueiam DELETE em prontuário/anotações e
   UPDATE/DELETE em auditorias/adendos/anotação finalizada.
@@ -145,6 +174,8 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   navegador pela rota `/api/medical-records/[requestId]/pdf` do front.
 
 ## Nunca faça
+- Gravar, transcrever ou armazenar áudio/vídeo das sessões; expor `roomId` ou logar tokens de vídeo; dar ao token de
+  participante permissões além de câmera/microfone; enviar nome, e-mail ou dado clínico ao provedor de vídeo.
 - Versionar `.env`, segredos ou fallback de segredo no `application.properties`.
 - Mudança destrutiva de schema sem migração e backup; apagar dado clínico; sobrescrever anotação finalizada.
 - Aceitar `role`/`status`/ids de dono do cliente para decidir permissão; criar caminho de promoção a ADMIN.

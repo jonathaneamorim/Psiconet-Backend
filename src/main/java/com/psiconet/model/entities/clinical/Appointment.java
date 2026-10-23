@@ -18,7 +18,10 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "agendamento")
+@Table(name = "agendamento", indexes = {
+        // Webhook do provedor de vídeo localiza a consulta pela sala.
+        @Index(name = "idx_agendamento_sala", columnList = "sala_id")
+})
 public class Appointment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

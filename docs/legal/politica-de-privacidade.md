@@ -1,8 +1,8 @@
 ---
 tipo: PRIVACY
 titulo: Política de Privacidade
-versao: 1.0.0
-vigencia: 2026-10-02
+versao: 1.1.0
+vigencia: 2026-10-23
 ---
 
 > **Minuta técnica — não é aconselhamento jurídico.** Trechos com `[A PREENCHER]` e "validar com
@@ -14,6 +14,7 @@ vigencia: 2026-10-02
 - Coletamos o necessário para você usar a Psiconet: dados de cadastro, perfil, agenda, cobranças, mensagens de suporte e, no caso do atendimento, o **prontuário mantido pelo seu psicólogo**.
 - Alguns dados são **sensíveis (saúde)**: o simples fato de você estar em acompanhamento psicológico, sua agenda de sessões e o prontuário. Eles recebem proteção reforçada; o prontuário é **cifrado** e só o psicólogo titular o lê.
 - **Não vendemos dados**, não usamos publicidade e **não há ferramentas de rastreamento** (analytics ou pixels).
+- As sessões on-line na **Sala Psiconet** acontecem por um provedor de vídeo contratado e **não são gravadas** pela Psiconet.
 - Você pode pedir acesso, correção, portabilidade, eliminação e mais. O canal é o chamado **"Privacidade / LGPD"** ou o e-mail do encarregado.
 
 ## 1. Controlador e encarregado
@@ -30,6 +31,7 @@ vigencia: 2026-10-02
 | Cadastro | Nome, e-mail, CPF, data de nascimento, senha (guardada só como *hash*) | Você |
 | Perfil | Telefone, endereço/cidade, foto; para psicólogos: CRP, especialidades, bio, experiência, endereço do consultório, chave Pix | Você |
 | Relação terapêutica | Pedidos de conexão, vínculo de tratamento, consultas, recorrências, links de reunião, endereços de atendimento | Você e o outro usuário |
+| Sessão por vídeo (Sala Psiconet) | Registro de presença na sala (quem entrou e saiu, e quando) e de emissão de acesso. **Áudio e vídeo não são gravados nem armazenados** pela Psiconet | Gerados pelo uso |
 | Financeiro | Valores, status de pagamento, **comprovantes enviados** (arquivo), contestações | Você e o outro usuário |
 | Clínico | Prontuário, anotações de sessão e adendos (cifrados), pedidos de acesso ao prontuário | Psicólogo / paciente |
 | Suporte | Chamados e mensagens | Você |
@@ -46,6 +48,7 @@ vigencia: 2026-10-02
 |---|---|
 | Criar e manter a conta, login, recuperação de senha | Execução de contrato (art. 7º, V) |
 | Conectar paciente e psicólogo, agenda, cobranças, notificações | Execução de contrato (art. 7º, V) |
+| Realizar a sessão por vídeo na Sala Psiconet (transmissão em tempo real) e registrar a presença | Execução de contrato (art. 7º, V) e, por revelar acompanhamento, o consentimento específico do paciente (art. 11, I) *(validar com jurídico)* |
 | Tratar o fato de você estar em acompanhamento (vínculo, agenda) — **dado sensível** | **Consentimento específico e destacado** (art. 11, I), colhido no cadastro do paciente |
 | Prontuário e anotações | Tutela da saúde, em procedimento realizado por profissional de saúde (art. 11, II, "f"), e cumprimento de obrigação regulatória do psicólogo (art. 11, II, "a") |
 | Segurança, prevenção a fraudes e abuso, auditoria | Legítimo interesse (art. 7º, IX) e garantia da prevenção à fraude (art. 11, II, "g") |
@@ -61,6 +64,8 @@ Não usamos seus dados para publicidade, perfilamento comercial ou decisões aut
 - **Administradores nunca têm acesso ao conteúdo clínico.**
 - Registros finalizados não podem ser alterados nem apagados; correções são feitas por adendo. Todo acesso fica em auditoria encadeada e imutável.
 - E-mails e notificações **nunca** contêm conteúdo clínico.
+- **Sessões por vídeo:** a Psiconet **não grava** áudio nem vídeo, não transcreve e não armazena a mídia. A transmissão vai cifrada do seu navegador ao provedor de vídeo e dele para a outra pessoa. A sala é exclusiva da consulta (no máximo 2 participantes) e só abre perto do horário marcado. O provedor recebe apenas um identificador da sala e um identificador interno do usuário — **nunca nome, e-mail ou conteúdo clínico**.
+- **Gravar a sessão sem o consentimento da outra pessoa é proibido** (ver Termos de Uso).
 
 ## 5. Compartilhamento
 
@@ -70,13 +75,14 @@ Não usamos seus dados para publicidade, perfilamento comercial ou decisões aut
 | Público em geral | Perfil público do psicólogo (nome, foto, CRP, especialidades, bio, cidade) e **fotos de perfil** (servidas por endereço público) | Busca de profissionais |
 | Provedor de infraestrutura | Todos os dados armazenados | Hospedagem: [A PREENCHER: provedor e região] |
 | Provedor de e-mail | E-mail, nome e o aviso enviado | Envio de e-mails transacionais: [A PREENCHER: provedor SMTP] |
+| Provedor de vídeo (operador) | Áudio e vídeo **em trânsito** durante a sessão, endereço IP e dados técnicos de conexão, identificadores opacos da sala e do usuário | Transmitir a sessão na Sala Psiconet: [A PREENCHER: LiveKit Cloud (LiveKit, Inc.) ou servidor próprio, e região] |
 | Autoridades | O que for exigido | Ordem judicial ou obrigação legal |
 
 Não vendemos nem alugamos dados pessoais.
 
 ## 6. Transferência internacional
 
-Se o provedor de hospedagem ou de e-mail mantiver servidores fora do Brasil (por exemplo, Google Workspace), haverá transferência internacional, feita com as garantias previstas na LGPD (arts. 33 a 36) — **[A PREENCHER: provedores, países e mecanismo adotado; validar com jurídico]**.
+Se o provedor de hospedagem, de e-mail ou de **vídeo** mantiver servidores fora do Brasil (por exemplo, Google Workspace ou a nuvem do provedor de vídeo), haverá transferência internacional, feita com as garantias previstas na LGPD (arts. 33 a 36) — **[A PREENCHER: provedores, países e mecanismo adotado; validar com jurídico]**.
 
 ## 7. Por quanto tempo guardamos
 
@@ -92,6 +98,8 @@ Se o provedor de hospedagem ou de e-mail mantiver servidores fora do Brasil (por
 | Chamados | 5 anos após o encerramento |
 | Sessões de login | Até a expiração; depois apenas como registro de acesso |
 | Notificações | Enquanto a conta existir *(rotina de limpeza: pendente)* |
+| Registro de presença nas sessões por vídeo | Mesmo prazo do prontuário (é registro de atendimento — validar) |
+| Áudio e vídeo das sessões | **Não são gravados nem guardados** |
 
 ## 8. Segurança
 
@@ -135,3 +143,4 @@ Novas versões terão número de versão e data de vigência, serão comunicadas
 | Versão | Vigência | Alterações |
 |---|---|---|
 | 1.0.0 | 2026-10-02 | Primeira versão. |
+| 1.1.0 | 2026-10-23 | Sala Psiconet (vídeo integrado): provedor de vídeo como operador, ausência de gravação, registro de presença e possível transferência internacional. |

@@ -66,7 +66,7 @@ class AdminRulesIntegrationTest extends IntegrationTestBase {
 
         mvc.perform(post("/legal/consents").header("Authorization", bearer(newToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(Map.of("acceptTerms", true, "termsVersion", "1.0.0", "privacyVersion", "1.0.0"))))
+                        .content(json(Map.of("acceptTerms", true, "termsVersion", com.psiconet.support.TestData.LEGAL_VERSION, "privacyVersion", com.psiconet.support.TestData.LEGAL_VERSION))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.consentRequired").value(false));
         mvc.perform(get("/admin/users").header("Authorization", bearer(newToken))).andExpect(status().isOk());
