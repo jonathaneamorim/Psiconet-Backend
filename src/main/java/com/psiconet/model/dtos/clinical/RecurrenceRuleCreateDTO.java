@@ -1,6 +1,7 @@
 package com.psiconet.model.dtos.clinical;
 
 import com.psiconet.model.entities.embeddable.Location;
+import com.psiconet.model.enums.clinical.MeetingProviderEnum;
 import com.psiconet.model.enums.clinical.MeetingTypeEnum;
 import com.psiconet.model.enums.clinical.RecurrenceFrequencyEnum;
 import jakarta.validation.constraints.DecimalMin;
@@ -43,6 +44,8 @@ public class RecurrenceRuleCreateDTO {
 
     @NotNull
     private MeetingTypeEnum meetingType;
+    // Só para VIDEO_CALL. Omitido ⇒ EXTERNAL_LINK (compatibilidade com clientes antigos).
+    private MeetingProviderEnum meetingProvider;
     private String meetingLink;
     private Location location;
 

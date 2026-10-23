@@ -8,11 +8,13 @@ import com.psiconet.model.enums.clinical.AppointmentStatusEnum;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
@@ -65,4 +67,23 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
           AND NOT EXISTS (SELECT 1 FROM Payment p WHERE p.appointment = a)
     """)
     List<Appointment> findCompletedChargeableWithoutPayment();
+
+    Optional<Appointment> findByRoomId(String roomId);
+
+    // Consultas na sala integrada que começam em breve e ainda não tiveram lembrete enviado.
+    @Query("""
+        SELECT a FROM Appointment a
+        WHERE a.status = com.psiconet.model.enums.clinical.AppointmentStatusEnum.ACCEPTED
+          AND a.meetingType = com.psiconet.model.enums.clinical.MeetingTypeEnum.VIDEO_CALL
+          AND a.meetingProvider = com.psiconet.model.enums.clinical.MeetingProviderEnum.IN_APP
+          AND a.videoReminderSentAt IS NULL
+          AND a.startDateTime > :now
+          AND a.startDateTime <= :until
+    """)
+    List<Appointment> findInAppVideoNeedingReminder(@Param("now") LocalDateTime now, @Param("until") LocalDateTime until);
+
+    // Marca o lembrete como enviado só se ainda não estava: retorna 0 quando outra execução já o fez.
+    @Modifying
+    @Query("UPDATE Appointment a SET a.videoReminderSentAt = :sentAt WHERE a.id = :id AND a.videoReminderSentAt IS NULL")
+    int markVideoReminderSent(@Param("id") UUID id, @Param("sentAt") LocalDateTime sentAt);
 }

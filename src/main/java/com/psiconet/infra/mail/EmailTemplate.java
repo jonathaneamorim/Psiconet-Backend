@@ -21,7 +21,8 @@ public enum EmailTemplate {
     ADMIN_ANNOUNCEMENT("comunicado", "Comunicado da Psiconet"),
     RECORD_ACCESS_REQUESTED("prontuario-solicitado", "Nova solicitação de acesso a prontuário — Psiconet"),
     RECORD_ACCESS_DECIDED("prontuario-respondido", "Sua solicitação de acesso ao prontuário foi respondida — Psiconet"),
-    LEGAL_DOCUMENTS_UPDATED("documentos-atualizados", "Atualizamos nossos Termos e Política de Privacidade — Psiconet");
+    LEGAL_DOCUMENTS_UPDATED("documentos-atualizados", "Atualizamos nossos Termos e Política de Privacidade — Psiconet"),
+    VIDEO_SESSION_REMINDER("lembrete-sessao-video", "Sua sessão online começa em breve — Psiconet");
 
     private final String templateName;
     private final String defaultSubject;

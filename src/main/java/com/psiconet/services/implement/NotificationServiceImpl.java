@@ -27,7 +27,9 @@ public class NotificationServiceImpl implements NotificationService {
 
     private static final Set<NotificationType> APPOINTMENT_TYPES = Set.of(
             NotificationType.APPOINTMENT_SCHEDULED,
-            NotificationType.APPOINTMENT_CANCELLED
+            NotificationType.APPOINTMENT_CANCELLED,
+            NotificationType.VIDEO_SESSION_REMINDER,
+            NotificationType.VIDEO_PARTICIPANT_JOINED
     );
 
     private static final Set<NotificationType> CONNECTION_TYPES = Set.of(
@@ -59,7 +61,7 @@ public class NotificationServiceImpl implements NotificationService {
             UUID refId
     ) {
         // Suporte, comunicados e prontuário são obrigatórios: ignoram as preferências.
-        if (!type.isMandatory() && !isCategoryEnabled(recipient, type)) {
+        if (!isEnabled(recipient, type)) {
             return;
         }
 
@@ -73,6 +75,12 @@ public class NotificationServiceImpl implements NotificationService {
                 .referenceId(refId)
                 .isRead(false)
                 .build());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isEnabled(User recipient, NotificationType type) {
+        return type.isMandatory() || isCategoryEnabled(recipient, type);
     }
 
     @Override

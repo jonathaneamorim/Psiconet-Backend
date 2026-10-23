@@ -49,7 +49,8 @@ class PatientSchedulingGuardTest {
     private final AppointmentServiceImpl appointmentService = new AppointmentServiceImpl(
             appointmentRepository, treatmentLinkRepository, recurrenceRuleRepository, generationService,
             mock(PaymentRepository.class), patientRepository, psychologistRepository, mock(UserRepository.class),
-            mock(AppointmentMapper.class), notificationService, paymentGenerationService);
+            new com.psiconet.mapper.AppointmentMapperImpl(), notificationService, paymentGenerationService,
+            new com.psiconet.infra.video.VideoProperties());
 
     private TreatmentLink linkWithPatientStatus(UserStatusEnum status) {
         User patientUser = new User();

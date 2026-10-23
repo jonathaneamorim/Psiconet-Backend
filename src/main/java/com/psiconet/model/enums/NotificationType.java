@@ -3,6 +3,9 @@ package com.psiconet.model.enums;
 public enum NotificationType {
     APPOINTMENT_SCHEDULED,
     APPOINTMENT_CANCELLED,
+    // Videochamada integrada (categoria "agendamento" das preferências) — ADR 016
+    VIDEO_SESSION_REMINDER,
+    VIDEO_PARTICIPANT_JOINED,
     CONNECTION_REQUESTED,
     CONNECTION_ACCEPTED,
     PAYMENT_PENDING,

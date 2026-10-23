@@ -97,6 +97,10 @@ public class SecurityConfig {
                         // Documentos legais (Termos, Privacidade, Cookies) e suas versões: públicos (ADR 011)
                         .requestMatchers(HttpMethod.GET, "/legal/versions", "/legal/documents/**").permitAll()
 
+                        // Webhook do provedor de vídeo: sem JWT de usuário, validado pela assinatura do
+                        // provedor no próprio endpoint (ADR 016). Só POST.
+                        .requestMatchers(HttpMethod.POST, "/webhooks/video").permitAll()
+
                         // Rotas do Swagger
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 

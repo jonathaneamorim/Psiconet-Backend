@@ -72,6 +72,13 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
+    public void sendVideoSessionReminder(String toEmail, String fullName, String startsAt, String callPath) {
+        publish(toEmail, EmailTemplate.VIDEO_SESSION_REMINDER, vars(fullName,
+                "inicio", startsAt,
+                "link", frontendUrl + callPath));
+    }
+
+    @Override
     public void sendRecordAccessRequested(String toEmail, String fullName) {
         publish(toEmail, EmailTemplate.RECORD_ACCESS_REQUESTED, vars(fullName,
                 "link", frontendUrl + "/notifications"));

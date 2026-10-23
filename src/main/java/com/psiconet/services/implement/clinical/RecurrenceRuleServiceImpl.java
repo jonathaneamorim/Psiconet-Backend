@@ -2,6 +2,7 @@ package com.psiconet.services.implement.clinical;
 
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
+import com.psiconet.infra.video.VideoProperties;
 import com.psiconet.mapper.RecurrenceRuleMapper;
 import com.psiconet.model.dtos.clinical.RecurrenceRuleCreateDTO;
 import com.psiconet.model.dtos.clinical.RecurrenceRuleDTO;
@@ -9,7 +10,6 @@ import com.psiconet.model.entities.access.User;
 import com.psiconet.model.entities.clinical.RecurrenceRule;
 import com.psiconet.model.entities.clinical.TreatmentLink;
 import com.psiconet.model.enums.RoleEnum;
-import com.psiconet.model.enums.clinical.MeetingProviderEnum;
 import com.psiconet.model.enums.clinical.MeetingTypeEnum;
 import com.psiconet.model.enums.clinical.RecurrenceFrequencyEnum;
 import com.psiconet.repositories.clinical.RecurrenceRuleRepository;
@@ -34,6 +34,7 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
     private final TreatmentLinkRepository treatmentLinkRepository;
     private final RecurrenceRuleMapper recurrenceRuleMapper;
     private final RecurrenceGenerationService recurrenceGenerationService;
+    private final VideoProperties videoProperties;
 
     @Override
     @Transactional
@@ -95,7 +96,9 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
             throw new BusinessException("endTime", "O horário de fim deve ser posterior ao início.");
         }
 
-        MeetingFieldsValidator.validate(dto.getMeetingType(), dto.getMeetingLink(), dto.getLocation());
+        MeetingFieldsValidator.MeetingFields meeting = MeetingFieldsValidator.validate(
+                dto.getMeetingType(), dto.getMeetingProvider(), dto.getMeetingLink(), dto.getLocation(),
+                videoProperties.isAvailable());
 
         if (dto.getPrice() == null && treatmentLink.getDefaultPrice() == null) {
             throw new BusinessException(
@@ -115,15 +118,14 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
         rule.setEndDate(dto.getEndDate());
         rule.setTitle(dto.getTitle());
         rule.setMeetingType(dto.getMeetingType());
-        rule.setMeetingLink(dto.getMeetingLink());
-        rule.setLocation(dto.getLocation());
+        rule.setMeetingLink(meeting.meetingLink());
+        rule.setLocation(dto.getMeetingType() == MeetingTypeEnum.IN_PERSON ? dto.getLocation() : null);
         rule.setPrice(dto.getPrice());
         rule.setAdjustForWeekend(dto.isAdjustForWeekend());
         rule.setIsActive(true);
 
-        if (dto.getMeetingType() == MeetingTypeEnum.VIDEO_CALL) {
-            rule.setMeetingProvider(MeetingProviderEnum.EXTERNAL_LINK);
-        }
+        // IN_APP: a regra NÃO guarda sala — cada ocorrência materializada recebe um roomId próprio.
+        rule.setMeetingProvider(meeting.provider());
 
         rule = recurrenceRuleRepository.save(rule);
 

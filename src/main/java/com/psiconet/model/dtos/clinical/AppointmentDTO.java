@@ -40,6 +40,10 @@ public class AppointmentDTO {
     private PersonSummaryDTO patient;
     private PersonSummaryDTO psychologist;
     private LocalDateTime createdAt;
+    // Janela de entrada na sala integrada, calculada pelo servidor (nula fora de VIDEO_CALL + IN_APP).
+    // O id da sala NUNCA é exposto.
+    private LocalDateTime joinOpensAt;
+    private LocalDateTime joinClosesAt;
 
     @Getter
     @Setter

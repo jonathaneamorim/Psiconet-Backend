@@ -4,10 +4,12 @@ import com.psiconet.model.entities.clinical.Appointment;
 import com.psiconet.model.entities.clinical.RecurrenceRule;
 import com.psiconet.model.enums.NotificationType;
 import com.psiconet.model.enums.clinical.AppointmentStatusEnum;
+import com.psiconet.model.enums.clinical.MeetingProviderEnum;
 import com.psiconet.model.enums.clinical.RecurrenceFrequencyEnum;
 import com.psiconet.repositories.clinical.AppointmentRepository;
 import com.psiconet.repositories.clinical.RecurrenceRuleRepository;
 import com.psiconet.services.implement.financial.PaymentGenerationService;
+import com.psiconet.services.implement.video.VideoRoomIds;
 import com.psiconet.services.interfaces.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -132,6 +134,11 @@ public class RecurrenceGenerationService {
         appointment.setMeetingType(rule.getMeetingType());
         appointment.setMeetingProvider(rule.getMeetingProvider());
         appointment.setMeetingLink(rule.getMeetingLink());
+        // Sala integrada: id novo e imprevisível em CADA ocorrência (nunca copiado da regra).
+        if (rule.getMeetingProvider() == MeetingProviderEnum.IN_APP) {
+            appointment.setMeetingLink(null);
+            appointment.setRoomId(VideoRoomIds.newRoomId());
+        }
         appointment.setLocation(rule.getLocation());
         appointment.setPrice(rule.getPrice() != null ? rule.getPrice() : rule.getTreatmentLink().getDefaultPrice());
 

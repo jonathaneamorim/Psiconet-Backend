@@ -26,4 +26,7 @@ public interface EmailService {
 
     /** Nova versão de Termos/Privacidade publicada (só o nome dos documentos; ADR 013). */
     void sendLegalDocumentsUpdated(String toEmail, String fullName, String documentNames);
+
+    /** Lembrete da sessão na sala integrada: só data/hora e o link da sala — sem nome da outra parte (ADR 016). */
+    void sendVideoSessionReminder(String toEmail, String fullName, String startsAt, String callPath);
 }

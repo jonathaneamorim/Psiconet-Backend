@@ -75,6 +75,20 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.withCode(HttpStatus.TOO_MANY_REQUESTS.value(), "RATE_LIMITED", ex.getMessage()));
     }
 
+    @ExceptionHandler(com.psiconet.infra.video.VideoAccessException.class)
+    public ResponseEntity<ErrorResponse> handleVideoAccess(com.psiconet.infra.video.VideoAccessException ex) {
+        log.warn("Entrada na sala de vídeo recusada: {}", ex.getCode());
+        return ResponseEntity.status(ex.getStatus())
+                .body(ErrorResponse.withCode(ex.getStatus(), ex.getCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(com.psiconet.infra.video.InvalidWebhookSignatureException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidWebhook(com.psiconet.infra.video.InvalidWebhookSignatureException ex) {
+        log.warn("Webhook de vídeo recusado: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.withCode(HttpStatus.UNAUTHORIZED.value(), "UNAUTHENTICATED", "Assinatura inválida."));
+    }
+
     @ExceptionHandler(ClinicalUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleClinicalUnavailable(ClinicalUnavailableException ex) {
         log.error("Requisição clínica recusada: chave-mestra não configurada.");

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+<body>
+<span th:fragment="previa">Sua sessão online na sala da Psiconet começa em breve.</span>
+<td th:fragment="conteudo" style="padding:32px;">
+  <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;">
+    Sua sessão online começa em breve. A sala abre alguns minutos antes do horário marcado.
+  </p>
+  <table th:replace="~{components/destaque :: destaque('Início: ' + ${inicio})}"></table>
+  <div th:replace="~{components/botao :: botao(${link}, 'Entrar na sala')}"></div>
+  <p th:replace="~{components/botao :: link-alternativo(${link})}"></p>
+  <p th:replace="~{components/paragrafo :: nota('A Psiconet não grava as sessões. Use um local reservado e fones de ouvido, se possível.')}"></p>
+</td>
+</body>
+</html>

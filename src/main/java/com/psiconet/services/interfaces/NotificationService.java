@@ -20,6 +20,9 @@ public interface NotificationService {
             UUID refId
     );
 
+    /** Se o usuário recebe esse tipo (obrigatórias sempre; demais conforme as preferências). Vale também para e-mails. */
+    boolean isEnabled(User recipient, NotificationType type);
+
     List<NotificationDTO> listForUser(UUID userId);
 
     Long countUnread(UUID userId);
