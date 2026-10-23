@@ -123,6 +123,7 @@ public class VideoSessionServiceImpl implements VideoSessionService {
                 .startDateTime(appointment.getStartDateTime())
                 .endDateTime(appointment.getEndDateTime())
                 .joinClosesAt(joinWindow.closesAt(appointment))
+                .aloneTimeoutSeconds(properties.getAloneTimeout().toSeconds())
                 .build();
     }
 

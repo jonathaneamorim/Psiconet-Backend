@@ -115,6 +115,9 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   (`VIDEO_JOIN_OPENS_BEFORE` 10 min antes do início → `VIDEO_JOIN_CLOSES_AFTER` 15 min após o fim). Token: só
   câmera/microfone, sem dados/tela/gravação/admin, identidade = id do usuário, sem nome/metadados, sala com **máx. 2**.
   Psicólogo = anfitrião (`POST .../video/end` encerra para todos); paciente aguarda na sala até ele entrar.
+- **Ciclo da sala:** nasce na entrada (`CreateRoom` idempotente); todos saíram ⇒ fecha em 5 s
+  (`departure-timeout`); nova entrada reabre. **Sozinho 15 min** (`VIDEO_ALONE_TIMEOUT`) ⇒ o front avisa e
+  desconecta; `VideoAloneParticipantWatchdog` (1 min) remove pelo provedor quem passar do limite + 1 min.
 - **Webhook** `POST /webhooks/video` (permitAll + assinatura obrigatória): presença em `log_sessao_video` (imutável,
   idempotente). **Só registra** — não muda status nem pagamento. Primeira entrada do psicólogo ⇒ `VIDEO_PARTICIPANT_JOINED`.
 - **Lembrete:** `VideoSessionReminderService` (1 min) ⇒ `VIDEO_SESSION_REMINDER` + e-mail `lembrete-sessao-video` ~15 min

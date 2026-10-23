@@ -69,6 +69,19 @@ changelog da Twilio ("Twilio Video will remain a standalone product"), registros
    psicólogo conectar; como a sala só admite as duas identidades da consulta, não há exposição a
    terceiros. Quando o psicólogo entra pela primeira vez, o paciente recebe a notificação
    `VIDEO_PARTICIPANT_JOINED`. Sala de espera com admissão manual fica no backlog.
+   **Ciclo de vida da sala (revisão de 2026-10-23):**
+   - a sala **nasce quando alguém entra** (`CreateRoom` idempotente no `/video/join`; o `roomConfig` do
+     token reforça). Sem ninguém conectado, o provedor a descarta em `empty-timeout` (1 min);
+   - **todos saíram ⇒ sala fechada** após `departure-timeout` (5 s, folga para recarregar a página; o
+     LiveKit trata 0 como o padrão de 20 s). Nova entrada dentro da janela **reabre** a sala (mesmo
+     `roomId`, credencial nova);
+   - **sozinho por `VIDEO_ALONE_TIMEOUT` (15 min) ⇒ desconectado**, esteja esperando a outra pessoa ou
+     depois que ela saiu. O front avisa nos 2 últimos minutos e desconecta; o backend garante
+     (`VideoAloneParticipantWatchdog`, a cada 1 min, consulta as salas `psn_*` no provedor e remove pelo
+     `RemoveParticipant` quem segue sozinho após o limite + 1 min). Estado em memória, como o rate limit:
+     reiniciar a API só recomeça a contagem. A pessoa pode entrar de novo enquanto a janela estiver aberta.
+   - Verificado contra um LiveKit 1.13.10 local: campos snake_case no Twirp; `ListParticipants` e
+     `RemoveParticipant` exigem `roomAdmin` com `room` no token de servidor.
 9. **Webhook** `POST /webhooks/video` (público só no `SecurityConfig`, validado pela assinatura;
    inválido ⇒ 401): `participant_joined`, `participant_left`/`participant_connection_aborted` e
    `room_finished` viram linhas em `log_sessao_video` (idempotente pelo id do evento). **Só registra:

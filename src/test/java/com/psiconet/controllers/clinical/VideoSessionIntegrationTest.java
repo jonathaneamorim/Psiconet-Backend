@@ -270,6 +270,7 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
         assertEquals(psychologist.getId().toString(), hostBody.get("identity").asText());
         assertEquals(patient.getId().toString(), hostBody.get("remoteIdentity").asText());
         assertEquals("wss://video.psiconet.test", hostBody.get("serverUrl").asText());
+        assertEquals(15 * 60, hostBody.get("aloneTimeoutSeconds").asLong());
         assertEquals("no-store", host.getResponse().getHeader("Cache-Control"));
         assertFalse(host.getResponse().getContentAsString().contains(a.getRoomId()));
 

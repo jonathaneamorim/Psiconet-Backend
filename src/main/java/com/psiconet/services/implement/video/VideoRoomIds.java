@@ -11,7 +11,7 @@ import java.util.Optional;
 public final class VideoRoomIds {
 
     private static final SecureRandom RANDOM = new SecureRandom();
-    private static final String ROOM_NAME_PREFIX = "psn_";
+    static final String ROOM_NAME_PREFIX = "psn_";
 
     private VideoRoomIds() {}
 

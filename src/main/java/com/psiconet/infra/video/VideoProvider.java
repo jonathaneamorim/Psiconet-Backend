@@ -1,6 +1,7 @@
 package com.psiconet.infra.video;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -22,6 +23,15 @@ public interface VideoProvider {
     /** Encerra a sala, desconectando todos (sem efeito se ela não existir). */
     void closeRoom(String roomName);
 
+    /** Salas abertas no provedor, com a quantidade de participantes conectados. */
+    List<ActiveRoom> listRooms();
+
+    /** Identidades conectadas à sala (vazio se ela não existir). */
+    List<String> listParticipants(String roomName);
+
+    /** Desconecta um participante da sala (sem efeito se ele já saiu). */
+    void removeParticipant(String roomName, String identity);
+
     /**
      * Valida a assinatura e interpreta o webhook. Assinatura inválida ⇒ {@link InvalidWebhookSignatureException};
      * evento sem interesse para a Psiconet ⇒ vazio.
@@ -29,4 +39,6 @@ public interface VideoProvider {
     Optional<VideoWebhookEvent> parseWebhook(byte[] rawBody, String authorizationHeader);
 
     record IssuedToken(String token, Instant expiresAt) {}
+
+    record ActiveRoom(String name, int participants) {}
 }

@@ -32,4 +32,6 @@ public class VideoJoinResponseDTO {
     private final LocalDateTime startDateTime;
     private final LocalDateTime endDateTime;
     private final LocalDateTime joinClosesAt;
+    /** Quem fica sozinho na sala por este tempo é desconectado (o front avisa antes). */
+    private final long aloneTimeoutSeconds;
 }

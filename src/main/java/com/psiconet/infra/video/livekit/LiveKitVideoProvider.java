@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.psiconet.infra.video.InvalidWebhookSignatureException;
@@ -25,8 +26,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -79,7 +82,7 @@ public class LiveKitVideoProvider implements VideoProvider {
                 "max_participants", maxParticipants,
                 "empty_timeout", properties.getEmptyTimeout().toSeconds(),
                 "departure_timeout", properties.getDepartureTimeout().toSeconds()
-        ));
+        ), null);
     }
 
     @Override
@@ -121,10 +124,41 @@ public class LiveKitVideoProvider implements VideoProvider {
     @Override
     public void closeRoom(String roomName) {
         try {
-            callRoomService("DeleteRoom", Map.of("room", roomName));
+            callRoomService("DeleteRoom", Map.of("room", roomName), null);
         } catch (VideoAccessException ex) {
             // Sala já descartada pelo provedor (ninguém conectado): nada a encerrar.
             log.info("Encerramento de sala ignorado: sala inexistente ou indisponível no provedor.");
+        }
+    }
+
+    @Override
+    public List<ActiveRoom> listRooms() {
+        JsonNode response = callRoomService("ListRooms", Map.of(), null);
+        List<ActiveRoom> rooms = new ArrayList<>();
+        for (JsonNode room : response.path("rooms")) {
+            rooms.add(new ActiveRoom(room.path("name").asText(""), room.path("num_participants").asInt(0)));
+        }
+        return rooms;
+    }
+
+    @Override
+    public List<String> listParticipants(String roomName) {
+        JsonNode response = callRoomService("ListParticipants", Map.of("room", roomName), roomName);
+        List<String> identities = new ArrayList<>();
+        for (JsonNode participant : response.path("participants")) {
+            String identity = participant.path("identity").asText(null);
+            if (identity != null) identities.add(identity);
+        }
+        return identities;
+    }
+
+    @Override
+    public void removeParticipant(String roomName, String identity) {
+        try {
+            callRoomService("RemoveParticipant", Map.of("room", roomName, "identity", identity), roomName);
+        } catch (VideoAccessException ex) {
+            // Já saiu (ou a sala fechou) entre a consulta e a remoção.
+            log.info("Remoção de participante ignorada: participante ou sala inexistente no provedor.");
         }
     }
 
@@ -183,19 +217,29 @@ public class LiveKitVideoProvider implements VideoProvider {
         return Optional.of(new VideoWebhookEvent(eventId, type, roomName, identity, occurredAt));
     }
 
-    private void callRoomService(String method, Map<String, Object> body) {
+    /**
+     * Chamada Twirp/JSON ao RoomService. {@code scopeRoom}: operações sobre participantes exigem
+     * {@code roomAdmin} restrito à sala no token de servidor (verificado contra o servidor LiveKit).
+     */
+    private JsonNode callRoomService(String method, Map<String, Object> body, String scopeRoom) {
         String apiUrl = properties.resolvedApiUrl();
         if (apiUrl == null) {
             throw VideoAccessException.unavailable();
         }
         try {
-            restClient.post()
+            String response = restClient.post()
                     .uri(apiUrl + ROOM_SERVICE + method)
-                    .header("Authorization", "Bearer " + serverToken())
+                    .header("Authorization", "Bearer " + serverToken(scopeRoom))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
-                    .toBodilessEntity();
+                    .body(String.class);
+            return response == null || response.isBlank()
+                    ? objectMapper.createObjectNode()
+                    : objectMapper.readTree(response);
+        } catch (JsonProcessingException ex) {
+            log.warn("Resposta ilegível do provedor de vídeo em {}.", method);
+            throw VideoAccessException.unavailable();
         } catch (RestClientResponseException ex) {
             log.warn("Provedor de vídeo recusou {}: HTTP {}", method, ex.getStatusCode().value());
             throw VideoAccessException.unavailable();
@@ -205,14 +249,16 @@ public class LiveKitVideoProvider implements VideoProvider {
         }
     }
 
-    /** JWT de servidor, de vida curtíssima, só com permissão de criar/administrar salas. */
-    private String serverToken() {
+    /** JWT de servidor, de vida curtíssima, só com permissão de criar/listar/administrar salas. */
+    private String serverToken(String scopeRoom) {
         Instant now = Instant.now();
+        Map<String, Object> grant = new HashMap<>(Map.of("roomCreate", true, "roomAdmin", true, "roomList", true));
+        if (scopeRoom != null) grant.put("room", scopeRoom);
         return JWT.create()
                 .withIssuer(properties.getApiKey())
                 .withNotBefore(Date.from(now))
                 .withExpiresAt(Date.from(now.plus(SERVER_TOKEN_TTL)))
-                .withClaim("video", Map.of("roomCreate", true, "roomAdmin", true, "roomList", true))
+                .withClaim("video", grant)
                 .sign(algorithm());
     }
 

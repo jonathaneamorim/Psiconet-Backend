@@ -45,11 +45,20 @@ public class VideoProperties {
     /** Antecedência do lembrete (notificação + e-mail). */
     private Duration reminderBefore = Duration.ofMinutes(15);
 
-    /** Sala vazia (ninguém entrou) é descartada pelo provedor após este tempo. */
-    private Duration emptyTimeout = Duration.ofMinutes(5);
+    /**
+     * Sala criada na entrada, mas em que ninguém chegou a conectar, é descartada após este tempo.
+     * (A sala nasce quando alguém entra; uma nova entrada a recria.)
+     */
+    private Duration emptyTimeout = Duration.ofMinutes(1);
 
-    /** Depois que todos saem, a sala é descartada após este tempo. */
-    private Duration departureTimeout = Duration.ofMinutes(2);
+    /**
+     * Depois que todos saem, a sala é fechada após este tempo (folga para recarregar a página).
+     * O LiveKit trata 0 como "padrão do servidor" (20 s), por isso o valor nunca é zero.
+     */
+    private Duration departureTimeout = Duration.ofSeconds(5);
+
+    /** Quem fica sozinho na sala por este tempo é desconectado (pelo front; o backend garante com folga). */
+    private Duration aloneTimeout = Duration.ofMinutes(15);
 
     /** Disponível de fato: flag ligada e provedor configurado. */
     public boolean isAvailable() {
