@@ -24,6 +24,7 @@ cobranças via Pix, notificações, **sessões on-line na Sala Psiconet (vídeo 
 ./mvnw -DskipTests package              # jar em target/
 docker compose up -d                    # Postgres (5432) + pgAdmin (5050)
 docker compose --profile video up -d livekit   # LiveKit local (:7880) p/ testar a Sala Psiconet (VIDEO_* no .env)
+scripts/dev-celular.sh [stop]           # Sala Psiconet pelo celular: túneis HTTPS (cloudflared) + LiveKit na rede
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # inclui chamados de exemplo (DevDataSeeder)
 ```
