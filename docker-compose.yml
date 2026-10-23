@@ -17,5 +17,30 @@ services:
       retries: 10
       start_period: 10s
 
+  # Servidor LiveKit local para testar a Sala Psiconet (ADR 016). Só sobe com:
+  #   docker compose --profile video up -d livekit
+  # Usa VIDEO_API_KEY/VIDEO_API_SECRET do .env (segredo com 32+ caracteres) e entrega os webhooks
+  # na API rodando no host (:8080). Rede do host para o WebRTC (UDP) funcionar sem NAT.
+  livekit:
+    image: livekit/livekit-server:v1.13.10
+    container_name: psiconet_livekit
+    profiles: ["video"]
+    network_mode: host
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        bind_addresses: ["127.0.0.1"]
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 50100
+          node_ip: 127.0.0.1
+          use_external_ip: false
+        keys:
+          ${VIDEO_API_KEY:-devkey}: ${VIDEO_API_SECRET:?defina VIDEO_API_SECRET no .env}
+        webhook:
+          api_key: ${VIDEO_API_KEY:-devkey}
+          urls: ["http://localhost:8080/webhooks/video"]
+
 volumes:
   db_data:

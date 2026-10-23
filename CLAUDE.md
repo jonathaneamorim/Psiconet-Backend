@@ -23,6 +23,7 @@ cobranças via Pix, notificações, **sessões on-line na Sala Psiconet (vídeo 
 ./mvnw test                             # 150+ testes, H2 — nunca toca no banco de dev
 ./mvnw -DskipTests package              # jar em target/
 docker compose up -d                    # Postgres (5432) + pgAdmin (5050)
+docker compose --profile video up -d livekit   # LiveKit local (:7880) p/ testar a Sala Psiconet (VIDEO_* no .env)
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # inclui chamados de exemplo (DevDataSeeder)
 ```
