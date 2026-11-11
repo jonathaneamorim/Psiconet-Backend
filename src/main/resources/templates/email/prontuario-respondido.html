@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+<body>
+<span th:fragment="previa">Sua solicitação de acesso ao prontuário foi respondida.</span>
+<td th:fragment="conteudo" style="padding:32px;">
+  <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;" th:if="${liberado}">
+    Seu(sua) psicólogo(a) <strong>liberou</strong> o acesso ao seu prontuário. Você pode visualizá-lo na plataforma.
+  </p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;" th:unless="${liberado}">
+    Seu(sua) psicólogo(a) respondeu à sua solicitação de acesso ao prontuário. Acesse a plataforma para ver os detalhes.
+  </p>
+  <div th:replace="~{components/botao :: botao(${link}, 'Ver na plataforma')}"></div>
+  <p th:replace="~{components/paragrafo :: nota('Por sigilo, nenhum conteúdo do prontuário é enviado por e-mail.')}"></p>
+</td>
+</body>
+</html>

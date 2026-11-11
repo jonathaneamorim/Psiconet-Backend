@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!--/*
+  Layout base de todos os e-mails da Psiconet (derivado do e-mail de redefinição de senha original).
+  Uso em um template específico:
+    <html th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+      <span th:fragment="previa">Texto curto exibido na caixa de entrada</span>
+      <td th:fragment="conteudo"> ...corpo... </td>
+    </html>
+  Regras: tabelas + estilos inline (compatibilidade com Outlook/Gmail), largura máx. 480px,
+  todo conteúdo dinâmico via th:text (escapado). Nunca usar th:utext com dados de usuário.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(previa, conteudo)" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light">
+  <title th:text="${assunto}">Psiconet</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;">
+  <!-- Pré-visualização (preheader), oculta no corpo -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;" th:insert="${previa}"></div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f5f9;padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:480px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <!-- Cabeçalho / identidade visual -->
+          <tr>
+            <td style="background-color:#2563eb;padding:24px 32px;">
+              <span style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.2px;">Psiconet</span>
+            </td>
+          </tr>
+
+          <!-- Corpo -->
+          <tr>
+            <td th:replace="${conteudo}" style="padding:32px;"></td>
+          </tr>
+
+          <!-- Rodapé -->
+          <tr>
+            <td style="background-color:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
+              <p style="font-size:11px;color:#94a3b8;margin:0 0 6px;line-height:16px;">
+                Este é um e-mail automático. Por favor, não responda — para falar com a equipe, use a opção
+                <strong>Suporte</strong> dentro da plataforma.
+              </p>
+              <p style="font-size:11px;color:#94a3b8;margin:0;line-height:16px;">
+                &copy; <span th:text="${anoAtual}">2026</span> Psiconet — Cuidando da sua saúde mental.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

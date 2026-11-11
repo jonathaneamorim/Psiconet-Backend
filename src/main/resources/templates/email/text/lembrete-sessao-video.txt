@@ -1,0 +1,15 @@
+Olá[# th:if="${nome != ''}"], [(${nome})][/]!
+
+Sua sessão online começa em breve. Entre na sala quando estiver pronto(a).
+
+Início: [(${inicio})]
+
+Entre na sala pela plataforma:
+
+[(${link})]
+
+A Psiconet não grava as sessões. Use um local reservado e fones de ouvido, se possível.
+
+--
+Este é um e-mail automático. Não responda — para falar com a equipe, use a opção Suporte na plataforma.
+© [(${anoAtual})] Psiconet — Cuidando da sua saúde mental.

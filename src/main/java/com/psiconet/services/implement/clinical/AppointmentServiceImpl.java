@@ -2,6 +2,7 @@ package com.psiconet.services.implement.clinical;
 
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
+import com.psiconet.infra.video.VideoProperties;
 import com.psiconet.mapper.AppointmentMapper;
 import com.psiconet.model.dtos.clinical.AppointmentCancelDTO;
 import com.psiconet.model.dtos.clinical.AppointmentCreateDTO;
@@ -29,6 +30,7 @@ import com.psiconet.repositories.profile.PatientRepository;
 import com.psiconet.repositories.profile.PsychologistRepository;
 import com.psiconet.services.implement.financial.PaymentGenerationService;
 import com.psiconet.services.interfaces.NotificationService;
+import com.psiconet.services.implement.video.VideoRoomIds;
 import com.psiconet.services.interfaces.clinical.AppointmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -61,6 +63,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final AppointmentMapper appointmentMapper;
     private final NotificationService notificationService;
     private final PaymentGenerationService paymentGenerationService;
+    private final VideoProperties videoProperties;
 
     @Override
     @Transactional
@@ -83,6 +86,8 @@ public class AppointmentServiceImpl implements AppointmentService {
                         "Você só pode agendar consultas com pacientes com quem tenha um vínculo de tratamento ativo."
                 ));
 
+        PatientSchedulingGuard.requireSchedulable(patient.getUser());
+
         if (dto.getStartDateTime().isBefore(LocalDateTime.now())) {
             throw new BusinessException("startDateTime", "A data e hora de início não podem estar no passado.");
         }
@@ -99,7 +104,9 @@ public class AppointmentServiceImpl implements AppointmentService {
                 ? dto.getTitle()
                 : psychologistUser.getFullName() + " X " + patient.getUser().getFullName();
 
-        validateMeetingFields(dto);
+        MeetingFieldsValidator.MeetingFields meeting = MeetingFieldsValidator.validate(
+                dto.getMeetingType(), dto.getMeetingProvider(), dto.getMeetingLink(), dto.getLocation(),
+                videoProperties.isAvailable());
 
         // Trava o psicólogo como mutex antes de checar conflito de horário: sem isso, duas requisições
         // concorrentes de criação de agendamento para o mesmo psicólogo poderiam ambas ler "sem
@@ -138,8 +145,11 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setPrice(price);
 
         if (dto.getMeetingType() == MeetingTypeEnum.VIDEO_CALL) {
-            appointment.setMeetingProvider(MeetingProviderEnum.EXTERNAL_LINK);
-            appointment.setMeetingLink(dto.getMeetingLink());
+            appointment.setMeetingProvider(meeting.provider());
+            appointment.setMeetingLink(meeting.meetingLink());
+            if (meeting.provider() == MeetingProviderEnum.IN_APP) {
+                appointment.setRoomId(VideoRoomIds.newRoomId());
+            }
         } else {
             appointment.setLocation(dto.getLocation());
         }
@@ -269,6 +279,23 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional(readOnly = true)
+    public AppointmentDTO getById(User user, UUID appointmentId) {
+        Appointment appointment = findAppointmentOrThrow(appointmentId);
+        if (!isParticipant(appointment, user)) {
+            // 404 em vez de 403: não confirma a existência de consultas de terceiros (anti-IDOR).
+            throw new EntityNotFoundException(Appointment.class, appointmentId);
+        }
+        return appointmentMapper.toDto(appointment);
+    }
+
+    static boolean isParticipant(Appointment appointment, User user) {
+        TreatmentLink link = appointment.getTreatmentLink();
+        return link.getPsychologist().getUser().getId().equals(user.getId())
+                || link.getPatient().getUser().getId().equals(user.getId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public AppointmentStatsDTO getMonthlyStats(User user, int year, int month) {
         LocalDateTime start = LocalDate.of(year, month, 1).atStartOfDay();
         LocalDateTime end = start.plusMonths(1);
@@ -296,10 +323,6 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .cancelled(counts.getOrDefault(AppointmentStatusEnum.CANCELLED, 0L))
                 .noShow(counts.getOrDefault(AppointmentStatusEnum.NO_SHOW, 0L))
                 .build();
-    }
-
-    private void validateMeetingFields(AppointmentCreateDTO dto) {
-        MeetingFieldsValidator.validate(dto.getMeetingType(), dto.getMeetingLink(), dto.getLocation());
     }
 
     private Appointment findAppointmentOrThrow(UUID appointmentId) {

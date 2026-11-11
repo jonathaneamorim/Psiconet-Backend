@@ -1,0 +1,6 @@
+<!--/* Estilos padrão de texto. Use: <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p> */-->
+<p xmlns:th="http://www.thymeleaf.org" th:fragment="saudacao(nome)" style="font-size:15px;color:#334155;margin:0 0 16px;line-height:22px;">
+  Olá<span th:if="${nome != null and nome != ''}" th:text="', ' + ${nome}">, Nome</span>!
+</p>
+
+<p xmlns:th="http://www.thymeleaf.org" th:fragment="nota(texto)" th:text="${texto}" style="font-size:13px;color:#64748b;margin:0 0 8px;line-height:19px;">Nota</p>

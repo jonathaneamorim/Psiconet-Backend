@@ -1,0 +1,13 @@
+Olá[# th:if="${nome != ''}"], [(${nome})][/]!
+
+Recebemos uma solicitação para redefinir a senha da sua conta na Psiconet.
+Para escolher uma nova senha, acesse o link abaixo:
+
+[(${link})]
+
+O link expira em [(${expiracaoMinutos})] minutos e só pode ser usado uma vez.
+Se você não solicitou essa alteração, ignore este e-mail — sua senha continuará a mesma.
+
+--
+Este é um e-mail automático. Não responda — para falar com a equipe, use a opção Suporte na plataforma.
+© [(${anoAtual})] Psiconet — Cuidando da sua saúde mental.

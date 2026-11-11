@@ -2,13 +2,19 @@ package com.psiconet.infra.exceptions;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -35,14 +41,59 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
-    @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleEmailExists(EmailAlreadyExistsException ex) {
-        log.warn("Tentativa de cadastro com e-mail já existente: {}", ex.getMessage());
-        ErrorResponse response = new ErrorResponse(
-                HttpStatus.CONFLICT.value(),
-                ex.getMessage()
-        );
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
+        log.warn("Conflito de dados no campo '{}'.", ex.getField());
+        Map<String, String> errors = ex.getField() == null ? null : Map.of(ex.getField(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), errors));
+    }
+
+    @ExceptionHandler(com.psiconet.infra.security.InvalidSessionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSession(com.psiconet.infra.security.InvalidSessionException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.withCode(HttpStatus.UNAUTHORIZED.value(), "SESSION_EXPIRED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LegalVersionOutdatedException.class)
+    public ResponseEntity<ErrorResponse> handleLegalVersionOutdated(LegalVersionOutdatedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.withCode(HttpStatus.CONFLICT.value(), "LEGAL_VERSION_OUTDATED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccountStatusException.class)
+    public ResponseEntity<ErrorResponse> handleAccountStatus(AccountStatusException ex) {
+        log.warn("Login recusado pelo status da conta: {}", ex.getCode());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ErrorResponse.withCode(HttpStatus.FORBIDDEN.value(), ex.getCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(ErrorResponse.withCode(HttpStatus.TOO_MANY_REQUESTS.value(), "RATE_LIMITED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(com.psiconet.infra.video.VideoAccessException.class)
+    public ResponseEntity<ErrorResponse> handleVideoAccess(com.psiconet.infra.video.VideoAccessException ex) {
+        log.warn("Entrada na sala de vídeo recusada: {}", ex.getCode());
+        return ResponseEntity.status(ex.getStatus())
+                .body(ErrorResponse.withCode(ex.getStatus(), ex.getCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(com.psiconet.infra.video.InvalidWebhookSignatureException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidWebhook(com.psiconet.infra.video.InvalidWebhookSignatureException ex) {
+        log.warn("Webhook de vídeo recusado: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.withCode(HttpStatus.UNAUTHORIZED.value(), "UNAUTHENTICATED", "Assinatura inválida."));
+    }
+
+    @ExceptionHandler(ClinicalUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleClinicalUnavailable(ClinicalUnavailableException ex) {
+        log.error("Requisição clínica recusada: chave-mestra não configurada.");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponse.withCode(HttpStatus.SERVICE_UNAVAILABLE.value(), "CLINICAL_UNAVAILABLE", ex.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -90,9 +141,8 @@ public class GlobalExceptionHandler {
         Map<String, String> errors = new HashMap<>();
 
         ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
+            String fieldName = error instanceof FieldError fieldError ? fieldError.getField() : error.getObjectName();
+            errors.putIfAbsent(fieldName, error.getDefaultMessage());
         });
 
         log.warn("Falha na validação de dados: {}", errors);
@@ -163,12 +213,36 @@ public class GlobalExceptionHandler {
     // banco já impede o dado duplicado — aqui só evitamos vazar um 500 genérico para esse caso.
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        log.warn("Violação de integridade de dados: {}", ex.getMessage());
+        // Não loga a mensagem do banco: ela costuma trazer os valores (ex.: CPF/e-mail duplicado).
+        log.warn("Violação de integridade de dados: {}", ex.getMostSpecificCause().getClass().getSimpleName());
         ErrorResponse response = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
                 "Não foi possível concluir a operação: um registro conflitante já existe."
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class
+    })
+    public ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
+        log.warn("Requisição malformada: {}", ex.getClass().getSimpleName());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Requisição inválida. Verifique os dados enviados."));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), "Recurso não encontrado."));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(new ErrorResponse(HttpStatus.METHOD_NOT_ALLOWED.value(), "Método não suportado para este recurso."));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

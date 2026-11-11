@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+<body>
+<span th:fragment="previa">Atualizamos nossos documentos legais</span>
+<td th:fragment="conteudo" style="padding:32px;">
+  <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p>
+  <p style="font-size:17px;font-weight:bold;color:#0f172a;margin:0 0 12px;line-height:24px;">Atualizamos nossos documentos</p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;">
+    Publicamos uma nova versão de: <strong th:text="${documentos}">Termos de Uso</strong>.
+    No seu próximo acesso, você poderá ler as mudanças e confirmar o aceite para continuar usando a plataforma.
+  </p>
+  <div th:replace="~{components/botao :: botao(${link}, 'Ler e aceitar')}"></div>
+  <p th:replace="~{components/paragrafo :: nota('O histórico de versões fica no final de cada documento, nas páginas públicas da Psiconet.')}"></p>
+</td>
+</body>
+</html>

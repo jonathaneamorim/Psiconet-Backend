@@ -11,11 +11,21 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>,
+        org.springframework.data.jpa.repository.JpaSpecificationExecutor<User> {
+    long countByRoleAndStatus(RoleEnum role, com.psiconet.model.enums.UserStatusEnum status);
+    long countByRole(RoleEnum role);
+    long countByStatus(com.psiconet.model.enums.UserStatusEnum status);
+
     boolean existsByEmail(String email);
+    boolean existsByEmailIgnoreCase(String email);
     Optional<User> findByEmail(String email);
+    Optional<User> findByEmailIgnoreCase(String email);
     boolean existsByRole(RoleEnum role);
     boolean existsByCpf(String cpf);
+    Optional<User> findFirstByBaseAdminTrue();
+    java.util.List<User> findByStatus(com.psiconet.model.enums.UserStatusEnum status);
+    java.util.List<User> findByRoleOrderByCreatedAtAsc(RoleEnum role);
 
     // Trava a linha do usuário (SELECT ... FOR UPDATE) pelo resto da transação atual. Usado como
     // mutex para serializar fluxos de "checar-depois-inserir" (ex.: conflito de horário de agenda,

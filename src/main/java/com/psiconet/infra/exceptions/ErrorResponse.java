@@ -17,6 +17,8 @@ import java.util.Map;
 public class ErrorResponse {
 
     private int status;
+    // Código estável para o frontend tomar decisões (ex.: PASSWORD_CHANGE_REQUIRED, RATE_LIMITED).
+    private String code;
     private String message;
     private LocalDateTime timestamp;
     private Map<String, String> errors;
@@ -25,6 +27,12 @@ public class ErrorResponse {
         this.status = status;
         this.message = message;
         this.timestamp = LocalDateTime.now();
+    }
+
+    public static ErrorResponse withCode(int status, String code, String message) {
+        ErrorResponse response = new ErrorResponse(status, message);
+        response.setCode(code);
+        return response;
     }
 
     public ErrorResponse(int status, String message, Map<String, String> errors) {

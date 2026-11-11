@@ -1,0 +1,12 @@
+Olá[# th:if="${nome != ''}"], [(${nome})][/]!
+
+A equipe Psiconet respondeu ao seu chamado [(${protocolo})].
+Acesse a plataforma para ler a resposta e continuar a conversa:
+
+[(${link})]
+
+Por privacidade, o conteúdo das mensagens só é exibido dentro da plataforma.
+
+--
+Este é um e-mail automático. Não responda — para falar com a equipe, use a opção Suporte na plataforma.
+© [(${anoAtual})] Psiconet — Cuidando da sua saúde mental.

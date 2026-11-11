@@ -18,7 +18,10 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "agendamento")
+@Table(name = "agendamento", indexes = {
+        // Webhook do provedor de vídeo localiza a consulta pela sala.
+        @Index(name = "idx_agendamento_sala", columnList = "sala_id")
+})
 public class Appointment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -50,9 +53,14 @@ public class Appointment {
     @Column(name = "link_reuniao")
     private String meetingLink;
 
-    // Preparado para futuras
+    // Sala integrada (IN_APP): id opaco e aleatório gerado na criação/materialização (VideoRoomIds).
+    // Nunca exposto em DTO — a credencial de entrada sai só por POST /appointments/{id}/video/join.
     @Column(name = "sala_id")
     private String roomId;
+
+    // Marca o lembrete de sessão por vídeo já enviado (evita duplicidade entre execuções do job).
+    @Column(name = "lembrete_video_enviado_em")
+    private LocalDateTime videoReminderSentAt;
 
     // Apenas quando a consulta for presencial, caso contrário será null
     @Embedded

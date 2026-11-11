@@ -1,0 +1,14 @@
+Olá[# th:if="${nome != ''}"], [(${nome})][/]!
+
+[(${convidadoPor})] criou uma conta de administrador(a) para você na Psiconet.
+
+Por segurança, a senha temporária não é enviada por e-mail. Use a senha informada diretamente
+por quem criou sua conta — você deverá trocá-la no primeiro acesso:
+
+[(${link})]
+
+Se você não esperava este convite, não acesse o link e avise a equipe Psiconet.
+
+--
+Este é um e-mail automático. Não responda — para falar com a equipe, use a opção Suporte na plataforma.
+© [(${anoAtual})] Psiconet — Cuidando da sua saúde mental.

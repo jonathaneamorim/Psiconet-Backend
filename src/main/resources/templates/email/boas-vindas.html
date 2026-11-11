@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+<body>
+<span th:fragment="previa">Sua conta na Psiconet foi criada com sucesso.</span>
+<td th:fragment="conteudo" style="padding:32px;">
+  <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;">
+    Sua conta na Psiconet foi criada com sucesso como <strong th:text="${perfil}">Paciente</strong>. Você já pode acessar a plataforma com o e-mail e a senha cadastrados.
+  </p>
+  <div th:replace="~{components/botao :: botao(${link}, 'Acessar a Psiconet')}"></div>
+  <p th:replace="~{components/paragrafo :: nota('Se você não criou esta conta, entre em contato com o suporte pela plataforma ou ignore este e-mail.')}"></p>
+</td>
+</body>
+</html>

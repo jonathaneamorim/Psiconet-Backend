@@ -3,6 +3,8 @@ FROM maven:3.8.3-eclipse-temurin-17 AS builder
 WORKDIR /build
 COPY pom.xml .
 COPY src ./src
+# Documentos legais (Termos, Privacidade, Cookies) empacotados no jar
+COPY docs/legal ./docs/legal
 RUN mvn clean package -DskipTests
 
 # Stage 2: runtime (roda o app)

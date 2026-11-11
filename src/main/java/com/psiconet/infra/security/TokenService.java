@@ -4,52 +4,78 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.psiconet.model.entities.access.User;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import java.util.UUID;
 
+/** Emite e valida o token de ACESSO (JWT HS256, curto). A sessão longa é o refresh (SessionService). */
 @Service
+@RequiredArgsConstructor
 public class TokenService {
 
-    @Value("${api.security.token.secret}")
+    private static final String ISSUER = "psiconet";
+    private static final int MIN_SECRET_LENGTH = 32;
+
+    private final SessionProperties sessionProperties;
+
+    @Value("${api.security.token.secret:}")
     private String secret;
 
-    @Value("${api.security.token.expiration_hours:2}")
-    private Integer expirationHours;
+    private Algorithm algorithm;
 
-    private static final String ISSUER = "psiconet";
+    // Falha rápido: sem segredo (ou com segredo curto) a aplicação não sobe. Antes havia um
+    // fallback hardcoded no application.properties — qualquer um com acesso ao repositório
+    // conseguia forjar tokens.
+    @PostConstruct
+    void init() {
+        if (secret == null || secret.length() < MIN_SECRET_LENGTH) {
+            throw new IllegalStateException(
+                    "JWT_SECRET não configurado ou com menos de " + MIN_SECRET_LENGTH + " caracteres. " +
+                    "Defina a variável de ambiente JWT_SECRET (ex.: openssl rand -base64 48).");
+        }
+        algorithm = Algorithm.HMAC256(secret);
+    }
 
-    public String generateToken(User user) {
+    public IssuedToken generateAccessToken(User user, UUID sessionId) {
+        Instant now = Instant.now();
+        Instant expiresAt = now.plus(sessionProperties.getAccessToken());
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.create()
+            String token = JWT.create()
                     .withIssuer(ISSUER)
                     .withSubject(user.getEmail())
                     .withClaim("role", user.getRole().toString())
-                    .withExpiresAt(generateExpirationDate())
+                    .withClaim("ver", user.getTokenVersion())
+                    .withClaim("sid", sessionId.toString())
+                    .withIssuedAt(now)
+                    .withExpiresAt(expiresAt)
                     .sign(algorithm);
+            return new IssuedToken(token, expiresAt);
         } catch (JWTCreationException exception) {
-            throw new RuntimeException("Erro ao gerar token JWT", exception);
+            throw new IllegalStateException("Erro ao gerar token JWT", exception);
         }
     }
 
-    public String validateToken(String token) {
+    /** Assinatura, emissor e expiração conferidos; token sem {@code sid} (formato antigo) é recusado. */
+    public Optional<TokenClaims> validate(String token) {
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.require(algorithm)
-                    .withIssuer(ISSUER)
-                    .build()
-                    .verify(token)
-                    .getSubject();
-        } catch (JWTVerificationException exception) {
-            return "";
+            DecodedJWT jwt = JWT.require(algorithm).withIssuer(ISSUER).build().verify(token);
+            Integer version = jwt.getClaim("ver").asInt();
+            String sid = jwt.getClaim("sid").asString();
+            if (sid == null) return Optional.empty();
+            return Optional.of(new TokenClaims(jwt.getSubject(), version == null ? 0 : version, UUID.fromString(sid)));
+        } catch (JWTVerificationException | IllegalArgumentException exception) {
+            return Optional.empty();
         }
     }
 
-    private Instant generateExpirationDate() {
-        return Instant.now().plus(expirationHours, ChronoUnit.HOURS);
-    }
+    public record IssuedToken(String token, Instant expiresAt) {}
+
+    public record TokenClaims(String subject, int version, UUID sessionId) {}
 }

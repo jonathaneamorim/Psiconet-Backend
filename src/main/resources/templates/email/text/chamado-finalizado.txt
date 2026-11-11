@@ -1,0 +1,10 @@
+Olá[# th:if="${nome != ''}"], [(${nome})][/]!
+
+Seu chamado [(${protocolo})] foi finalizado pela equipe Psiconet.
+Se o problema continuar, abra um novo chamado pela opção Suporte no menu da sua conta.
+
+[(${link})]
+
+--
+Este é um e-mail automático. Não responda — para falar com a equipe, use a opção Suporte na plataforma.
+© [(${anoAtual})] Psiconet — Cuidando da sua saúde mental.

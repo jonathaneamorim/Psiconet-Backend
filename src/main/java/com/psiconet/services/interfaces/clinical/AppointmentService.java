@@ -13,6 +13,7 @@ import java.util.UUID;
 public interface AppointmentService {
     AppointmentDTO create(User psychologistUser, AppointmentCreateDTO dto);
     AppointmentDTO cancel(User user, UUID appointmentId, AppointmentCancelDTO dto);
+    AppointmentDTO getById(User user, UUID appointmentId);
     Page<AppointmentDTO> listMyAppointments(User user, Pageable pageable);
     AppointmentStatsDTO getMonthlyStats(User user, int year, int month);
 }

@@ -4,10 +4,12 @@ import com.psiconet.model.entities.clinical.Appointment;
 import com.psiconet.model.entities.clinical.RecurrenceRule;
 import com.psiconet.model.enums.NotificationType;
 import com.psiconet.model.enums.clinical.AppointmentStatusEnum;
+import com.psiconet.model.enums.clinical.MeetingProviderEnum;
 import com.psiconet.model.enums.clinical.RecurrenceFrequencyEnum;
 import com.psiconet.repositories.clinical.AppointmentRepository;
 import com.psiconet.repositories.clinical.RecurrenceRuleRepository;
 import com.psiconet.services.implement.financial.PaymentGenerationService;
+import com.psiconet.services.implement.video.VideoRoomIds;
 import com.psiconet.services.interfaces.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,6 +69,13 @@ public class RecurrenceGenerationService {
 
     @Transactional
     public void ensureNextInstance(RecurrenceRule rule) {
+        // Vínculo encerrado ou paciente sem conta ativa: não materializa novas consultas. A regra fica
+        // como está (sem avançar o cursor) e volta a gerar se o vínculo/conta for reativado.
+        if (!Boolean.TRUE.equals(rule.getTreatmentLink().getIsActive())
+                || !PatientSchedulingGuard.canBeScheduled(rule.getTreatmentLink().getPatient().getUser())) {
+            return;
+        }
+
         if (appointmentRepository.existsByRecurrenceRuleAndStatusIn(rule, ACTIVE_STATUSES)) {
             return;
         }
@@ -74,6 +83,12 @@ public class RecurrenceGenerationService {
         LocalDate from = rule.getLastGeneratedUntil() != null
                 ? rule.getLastGeneratedUntil().plusDays(1)
                 : rule.getStartDate();
+
+        // Nunca materializa ocorrências passadas (ex.: série que ficou pausada com o paciente inativo).
+        LocalDate today = LocalDate.now();
+        if (from.isBefore(today)) {
+            from = today;
+        }
 
         LocalDate searchLimit = rule.getEndDate() != null ? rule.getEndDate() : from.plusYears(2);
 
@@ -97,6 +112,10 @@ public class RecurrenceGenerationService {
         LocalDateTime start = date.atTime(rule.getStartTime());
         LocalDateTime end = date.atTime(rule.getEndTime());
 
+        if (start.isBefore(LocalDateTime.now())) {
+            return false;
+        }
+
         boolean hasConflict = !appointmentRepository
                 .findConflicting(rule.getTreatmentLink().getPsychologist(), start, end)
                 .isEmpty();
@@ -115,6 +134,11 @@ public class RecurrenceGenerationService {
         appointment.setMeetingType(rule.getMeetingType());
         appointment.setMeetingProvider(rule.getMeetingProvider());
         appointment.setMeetingLink(rule.getMeetingLink());
+        // Sala integrada: id novo e imprevisível em CADA ocorrência (nunca copiado da regra).
+        if (rule.getMeetingProvider() == MeetingProviderEnum.IN_APP) {
+            appointment.setMeetingLink(null);
+            appointment.setRoomId(VideoRoomIds.newRoomId());
+        }
         appointment.setLocation(rule.getLocation());
         appointment.setPrice(rule.getPrice() != null ? rule.getPrice() : rule.getTreatmentLink().getDefaultPrice());
 

@@ -1,0 +1,13 @@
+Olá[# th:if="${nome != ''}"], [(${nome})][/]!
+
+Atualizamos nossos documentos.
+
+Publicamos uma nova versão de: [(${documentos})].
+No seu próximo acesso, você poderá ler as mudanças e confirmar o aceite para continuar usando a plataforma:
+[(${link})]
+
+O histórico de versões fica no final de cada documento, nas páginas públicas da Psiconet.
+
+--
+Este é um e-mail automático. Não responda — para falar com a equipe, use a opção Suporte na plataforma.
+© [(${anoAtual})] Psiconet — Cuidando da sua saúde mental.

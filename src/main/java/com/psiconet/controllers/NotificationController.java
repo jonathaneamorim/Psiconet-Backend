@@ -35,6 +35,12 @@ public class NotificationController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/read-all")
+    public ResponseEntity<Void> markAllRead(@AuthenticationPrincipal User user) {
+        service.markAllAsRead(user);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/preferences")
     public ResponseEntity<NotificationPreferenceDTO> getPreferences(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(service.getPreferences(user));
