@@ -2,7 +2,7 @@
 
 > Fonte oficial de verdade do backend (substitui o antigo `GEMINI.md`, removido).
 > Projeto irmão: **Psiconet-Frontend** (Next.js) — `../Psiconet-Frontend/CLAUDE.md`.
-> Decisões registradas em `docs/decisoes/` (ADRs 000–017). Diagnóstico inicial: `docs/diagnostico-fase0.md`.
+> Decisões registradas em `docs/decisoes/` (ADRs 000–019). Diagnóstico inicial: `docs/diagnostico-fase0.md`.
 > Segurança: `docs/seguranca/` (auditoria 2026-11-11 e matriz de autorização por endpoint).
 > Documentos legais e inventário de dados: `docs/legal/`.
 
@@ -13,15 +13,21 @@ cobranças via Pix, notificações, **sessões on-line na Sala Psiconet (vídeo 
 **chamados de suporte** e **área administrativa** (usuários, administradores, dashboard, comunicados).
 
 ## Stack e versões
-- Java 17 (build validado com JDK 25), Spring Boot 3.3.5, Spring Security + JWT (`java-jwt` 4.4.0, HS256)
-- Spring Data JPA / Hibernate, PostgreSQL 15 · **H2 em memória nos testes** (perfil `test`)
-- MapStruct 1.5.5, Lombok 1.18.42, Bean Validation, SpringDoc 2.6, `spring-dotenv` (lê `.env`)
-- Thymeleaf **core** (templates de e-mail), Bucket4j 8.14 (rate limit), OpenPDF 2.0.3 (PDF do prontuário)
+- **Java 25 (LTS)**, **Spring Boot 4.1.2** (Spring Framework 7, Spring Security 7, Hibernate ORM 7, Tomcat 11) — ADR 018.
+  Suporte OSS da 4.1 até 31/07/2027; acompanhar a 4.2 (GA + 1º patch). Spring Security + JWT (`java-jwt` 4.6.2, HS256)
+- **Jackson 3** (`tools.jackson.*`; anotações seguem em `com.fasterxml.jackson.annotation`) — nunca injetar o
+  `ObjectMapper` do Jackson 2 (não existe no contexto); `asString()` em vez de `asText()`
+- Spring Data JPA / Hibernate 7, PostgreSQL 15 · **H2 em memória nos testes** (perfil `test`)
+- MapStruct 1.6.3, Lombok 1.18.48, Bean Validation, springdoc 3.2.0 (linha da Boot 4.1), `springboot4-dotenv` 5.1.0 (lê `.env`)
+- Starters da Boot 4: `spring-boot-starter-webmvc`; testes com `spring-boot-starter-webmvc-test` e `-security-test`
+  (`@AutoConfigureMockMvc` em `org.springframework.boot.webmvc.test.autoconfigure`, `@MockitoBean` no lugar de `@MockBean`)
+- Thymeleaf **core** 3.1 (templates de e-mail), Bucket4j 8.14 (rate limit), OpenPDF 2.0.3 (PDF do prontuário). Maven 3.9.16 (wrapper)
 
 ## Comandos
 ```bash
 ./mvnw spring-boot:run                  # API em :8080 (lê .env; se mvnw sem +x: sh mvnw ...)
-./mvnw test                             # 250+ testes, H2 — nunca toca no banco de dev nem lê o .env
+./mvnw test                             # 260+ testes, H2 — nunca toca no banco de dev nem lê o .env
+./mvnw test -Dtest=ApiContractSnapshotTest -Dcontract.update=true   # SÓ após mudança de contrato decidida (ADR 018)
 ./mvnw -DskipTests package              # jar em target/
 docker compose up -d                    # Postgres (5432) + pgAdmin (5050)
 docker compose --profile video up -d livekit   # LiveKit local (:7880) p/ testar a Sala Psiconet (VIDEO_* no .env)
@@ -60,7 +66,7 @@ infra/
   text/                 TextSanitizer, CpfMasker
   video/                VideoProvider (abstração), VideoProperties (psiconet.video.*), livekit/LiveKitVideoProvider,
                         VideoAccessException (códigos VIDEO_*), InvalidWebhookSignatureException
-  web/                  ClientIpResolver (+ X-Client-User-Agent), UserAgentSummarizer, WebMvcConfig (teto de página 100),
+  web/                  ClientIpResolver (+ X-Client-User-Agent), UserAgentSummarizer, WebMvcConfig (teto de página 200),
                         @SortableBy + PageableSortGuard (ordenação por lista branca), ClinicalNoStoreFilter,
                         RequestSizeLimitFilter (corpo ≤ 2 MB sem arquivo; webhook de vídeo ≤ 64 KB ⇒ 413)
 mapper/ model/{entities,dtos,enums}/ repositories/ services/{interfaces,implement}/
@@ -75,7 +81,10 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 - Erros no formato `ErrorResponse { status, code?, message, timestamp, errors? }`. `code` estável para o front:
   `UNAUTHENTICATED`, `FORBIDDEN`, `PASSWORD_CHANGE_REQUIRED`, `CONSENT_REQUIRED`, `LEGAL_VERSION_OUTDATED`,
   `SESSION_EXPIRED`, `RATE_LIMITED`, `PAYLOAD_TOO_LARGE`, `ACCOUNT_INACTIVE|BLOCKED|PENDING`, `CLINICAL_UNAVAILABLE`,
-  `VIDEO_NOT_IN_APP`, `VIDEO_APPOINTMENT_INACTIVE`, `VIDEO_WINDOW_NOT_OPEN`, `VIDEO_WINDOW_CLOSED`, `VIDEO_UNAVAILABLE`.
+  `VIDEO_NOT_IN_APP`, `VIDEO_APPOINTMENT_INACTIVE`, `VIDEO_WINDOW_NOT_OPEN`, `VIDEO_WINDOW_CLOSED`, `VIDEO_UNAVAILABLE`,
+  `SCHEDULE_OVERLAP` (409 + `conflicts`, ADR 019).
+- **Contrato da API protegido por teste:** `ApiContractSnapshotTest` (forma de 30 respostas) e `ClinicalHashStabilityTest`
+  (JSON canônico/hash do prontuário — se mudar, anotações antigas parecem adulteradas). Diferença = bug, salvo ADR.
 - Sucesso com mensagem sempre em JSON (`MessageResponseDTO`) — nunca texto puro (causa do bug do cadastro, ADR 002).
 - Recurso de outro usuário → **404** (anti-IDOR, mesma resposta de id inexistente); participante sem a permissão do
   papel → 403 (`AccessDeniedException`). Papel exigido **também por rota** no `SecurityConfig` (o `@PreAuthorize` roda
@@ -111,6 +120,18 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   correções por adendo encadeado. Psicólogo exporta PDF de guarda (`/medical-records/links/{id}/pdf`, opcional
   `includePrivateNotes`). Editor aceita alinhamento (center/right) e tamanho de fonte da lista fixa. Paciente **solicita** acesso; psicólogo libera (somente leitura, prazo/PDF opcionais)
   ou nega com justificativa. Tudo em `auditoria_clinica` (hash encadeado, imutável).
+
+## Agendamento — sobreposição de horário (ADR 019)
+- **Outro paciente no mesmo horário:** permitido só com `acknowledgeOverlap=true` em `AppointmentCreateDTO`/
+  `RecurrenceRuleCreateDTO`; sem ele ⇒ **409 `SCHEDULE_OVERLAP`** com `conflicts` (id, início, fim, título, paciente).
+  **Mesmo paciente** sobreposto ⇒ 400 (duplicidade), mesmo confirmando. Encostado (fim = início) não conflita;
+  `CANCELLED` não conta. Regras em `ScheduleOverlapService`; criação e geração recorrente travam o psicólogo.
+- **Sinalização calculada, nunca armazenada:** `hasOverlap`/`overlappingAppointments` no `AppointmentDTO` só para o
+  psicólogo dono (lote, só `ACCEPTED` não terminadas); para o paciente os campos não existem no JSON.
+- Pré-checagem `GET /appointments/overlaps?start&end[&excludeId]`; série: `GET /recurrence-rules/{id}/preview/overlaps` e
+  rascunho `POST /treatment-links/{id}/recurrence-rules/overlaps` (90 dias) — só psicólogo, rate limit `schedule-overlap-check`.
+- **Recorrência nunca pula ocorrência em silêncio:** sobreposta a outro paciente é gerada e notificada
+  (`SCHEDULE_OVERLAP`, só data/hora); a 1ª ocorrência da série exige confirmação. ⚠ Regras 2 e 3 do ADR 019 aguardam o dono do produto.
 
 ## Videochamada — Sala Psiconet (ADR 016)
 - **Arquitetura:** provedor SFU/WebRTC gerenciado (**LiveKit** Cloud ou self-host) atrás de `VideoProvider`. O backend só
@@ -148,6 +169,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 ## Padrão de notificação (ADR 005)
 - `NotificationService.create(recipient, actor, type, title, message, referenceType, referenceId)`.
 - Vídeo: `VIDEO_SESSION_REMINDER`, `VIDEO_PARTICIPANT_JOINED` (categoria "agendamento"; `referenceType = APPOINTMENT`).
+- Agenda: `SCHEDULE_OVERLAP` (só psicólogo, categoria "agendamento", ator nulo = sistema; nunca cita paciente).
 - `referenceType`: `APPOINTMENT`, `CONNECTION`, `PAYMENT`, `TICKET`, `ANNOUNCEMENT`, `MEDICAL_RECORD`, `LEGAL` (o front roteia por ele).
 - Tipos obrigatórios (`NotificationType.isMandatory()`): chamados, comunicados, prontuário e `LEGAL_DOCUMENTS_UPDATED` — ignoram preferências.
 - Mensagens nunca contêm conteúdo clínico.
@@ -157,7 +179,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 - Conta por IP (X-Forwarded-For aceito apenas de `TRUSTED_PROXIES`) e por usuário; 429 + `Retry-After`.
 - Políticas: `login`, `login-account`, `register`, `forgot-password`, `reset-password`, `refresh`, `change-password`, `ticket-open`,
   `ticket-message`, `record-access-request`, `admin-announcement`, `admin-user-write`, `clinical-write`, `video-join`,
-  `video-webhook`.
+  `video-webhook`, `schedule-overlap-check`.
 
 ## Legal e Privacidade (ADRs 011–015)
 - **Documentos** (minutas, com `[A PREENCHER]`): `docs/legal/*.md` com cabeçalho `tipo/titulo/versao/vigencia` e
