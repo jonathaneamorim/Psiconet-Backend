@@ -49,7 +49,8 @@ public class TokenService {
         try {
             String token = JWT.create()
                     .withIssuer(ISSUER)
-                    .withSubject(user.getEmail())
+                    // Id imutável, não o e-mail: o payload do JWT é legível por quem tem o token (SEC-12).
+                    .withSubject(user.getId().toString())
                     .withClaim("role", user.getRole().toString())
                     .withClaim("ver", user.getTokenVersion())
                     .withClaim("sid", sessionId.toString())
@@ -69,7 +70,7 @@ public class TokenService {
             Integer version = jwt.getClaim("ver").asInt();
             String sid = jwt.getClaim("sid").asString();
             if (sid == null) return Optional.empty();
-            return Optional.of(new TokenClaims(jwt.getSubject(), version == null ? 0 : version, UUID.fromString(sid)));
+            return Optional.of(new TokenClaims(UUID.fromString(jwt.getSubject()), version == null ? 0 : version, UUID.fromString(sid)));
         } catch (JWTVerificationException | IllegalArgumentException exception) {
             return Optional.empty();
         }
@@ -77,5 +78,5 @@ public class TokenService {
 
     public record IssuedToken(String token, Instant expiresAt) {}
 
-    public record TokenClaims(String subject, int version, UUID sessionId) {}
+    public record TokenClaims(UUID userId, int version, UUID sessionId) {}
 }

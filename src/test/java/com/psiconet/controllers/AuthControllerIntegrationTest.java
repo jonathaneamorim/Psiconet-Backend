@@ -243,6 +243,18 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
+    // SEC-12: o payload do JWT é legível por quem tiver o token — subject é o id, nunca o e-mail.
+    @Test
+    void tokenNaoCarregaEmailEUsaIdComoSubject() throws Exception {
+        User user = createUser(RoleEnum.PATIENT, UserStatusEnum.ACTIVE);
+        String token = tokenFor(user);
+        String payload = new String(java.util.Base64.getUrlDecoder().decode(token.split("\\.")[1]), java.nio.charset.StandardCharsets.UTF_8);
+
+        assertThat(payload).doesNotContain(user.getEmail());
+        assertThat(objectMapper.readTree(payload).get("sub").asText()).isEqualTo(user.getId().toString());
+        mvc.perform(get("/users/me").header("Authorization", bearer(token))).andExpect(status().isOk());
+    }
+
     @Test
     void logoutInvalidaOToken() throws Exception {
         User user = createUser(RoleEnum.PSYCHOLOGIST, UserStatusEnum.ACTIVE);
