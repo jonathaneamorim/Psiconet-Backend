@@ -14,13 +14,15 @@ import java.util.UUID;
 @Table(name = "psicologo")
 @Getter
 @Setter
-@ToString
+// Só o id no toString: chave Pix, endereço e o User (lazy) não podem ir para log (SEC-10).
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class Psychologist {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @ToString.Include
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
