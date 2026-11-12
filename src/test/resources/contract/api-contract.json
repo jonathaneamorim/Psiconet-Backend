@@ -1,0 +1,459 @@
+{
+  "GET /admin/dashboard" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "activePatients" : "integer",
+      "activePsychologists" : "integer",
+      "activeUsers" : "integer",
+      "generatedAt" : "datetime-local",
+      "inactiveUsers" : "integer",
+      "tickets" : {
+        "closed" : "integer",
+        "finished" : "integer",
+        "inProgress" : "integer",
+        "open" : "integer",
+        "pending" : "integer",
+        "resolved" : "integer"
+      },
+      "totalAdmins" : "integer",
+      "totalPatients" : "integer",
+      "totalPsychologists" : "integer",
+      "totalUsers" : "integer"
+    }
+  },
+  "GET /admin/users" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "content" : [ {
+        "baseAdmin" : "boolean",
+        "createdAt" : "instant-utc",
+        "email" : "string",
+        "fullName" : "string",
+        "id" : "uuid",
+        "lastLoginAt" : "null",
+        "maskedCpf" : "string",
+        "role" : "string",
+        "status" : "string"
+      } ],
+      "page" : {
+        "number" : "integer",
+        "size" : "integer",
+        "totalElements" : "integer",
+        "totalPages" : "integer"
+      }
+    }
+  },
+  "GET /appointments (paciente)" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "content" : [ {
+        "cancellationReason" : "null",
+        "cancelledBy" : "null",
+        "createdAt" : "datetime-local",
+        "description" : "null",
+        "endDateTime" : "datetime-local",
+        "id" : "uuid",
+        "joinClosesAt" : "null",
+        "joinOpensAt" : "null",
+        "location" : "null",
+        "meetingLink" : "string",
+        "meetingProvider" : "string",
+        "meetingType" : "string",
+        "patient" : {
+          "fullName" : "string",
+          "id" : "uuid",
+          "photoUrl" : "null"
+        },
+        "price" : "decimal(1)",
+        "psychologist" : {
+          "fullName" : "string",
+          "id" : "uuid",
+          "photoUrl" : "null"
+        },
+        "recurrenceFrequency" : "null",
+        "recurrenceRuleId" : "null",
+        "startDateTime" : "datetime-local",
+        "status" : "string",
+        "title" : "string"
+      } ],
+      "page" : {
+        "number" : "integer",
+        "size" : "integer",
+        "totalElements" : "integer",
+        "totalPages" : "integer"
+      }
+    }
+  },
+  "GET /appointments (psicólogo)" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "content" : [ {
+        "cancellationReason" : "null",
+        "cancelledBy" : "null",
+        "createdAt" : "datetime-local",
+        "description" : "null",
+        "endDateTime" : "datetime-local",
+        "id" : "uuid",
+        "joinClosesAt" : "null",
+        "joinOpensAt" : "null",
+        "location" : "null",
+        "meetingLink" : "string",
+        "meetingProvider" : "string",
+        "meetingType" : "string",
+        "patient" : {
+          "fullName" : "string",
+          "id" : "uuid",
+          "photoUrl" : "null"
+        },
+        "price" : "decimal(1)",
+        "psychologist" : {
+          "fullName" : "string",
+          "id" : "uuid",
+          "photoUrl" : "null"
+        },
+        "recurrenceFrequency" : "null",
+        "recurrenceRuleId" : "null",
+        "startDateTime" : "datetime-local",
+        "status" : "string",
+        "title" : "string"
+      } ],
+      "page" : {
+        "number" : "integer",
+        "size" : "integer",
+        "totalElements" : "integer",
+        "totalPages" : "integer"
+      }
+    }
+  },
+  "GET /appointments/stats" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "accepted" : "integer",
+      "cancelled" : "integer",
+      "completed" : "integer",
+      "noShow" : "integer"
+    }
+  },
+  "GET /appointments/{id}" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "cancellationReason" : "null",
+      "cancelledBy" : "null",
+      "createdAt" : "datetime-local",
+      "description" : "null",
+      "endDateTime" : "datetime-local",
+      "id" : "uuid",
+      "joinClosesAt" : "null",
+      "joinOpensAt" : "null",
+      "location" : "null",
+      "meetingLink" : "string",
+      "meetingProvider" : "string",
+      "meetingType" : "string",
+      "patient" : {
+        "fullName" : "string",
+        "id" : "uuid",
+        "photoUrl" : "null"
+      },
+      "price" : "decimal(1)",
+      "psychologist" : {
+        "fullName" : "string",
+        "id" : "uuid",
+        "photoUrl" : "null"
+      },
+      "recurrenceFrequency" : "null",
+      "recurrenceRuleId" : "null",
+      "startDateTime" : "datetime-local",
+      "status" : "string",
+      "title" : "string"
+    }
+  },
+  "GET /connections" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "content" : [ {
+        "connectedAt" : "datetime-local",
+        "connectionId" : "uuid",
+        "user" : {
+          "city" : "null",
+          "crp" : "null",
+          "defaultPrice" : "decimal(1)",
+          "description" : "null",
+          "experienceTime" : "null",
+          "fullName" : "string",
+          "id" : "uuid",
+          "photoUrl" : "null",
+          "role" : "string",
+          "specialties" : "null",
+          "state" : "null",
+          "treatmentLinkId" : "uuid"
+        }
+      } ],
+      "page" : {
+        "number" : "integer",
+        "size" : "integer",
+        "totalElements" : "integer",
+        "totalPages" : "integer"
+      }
+    }
+  },
+  "GET /legal/consents/status" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "consentRequired" : "boolean",
+      "pending" : [ ],
+      "privacyVersion" : "string",
+      "termsVersion" : "string"
+    }
+  },
+  "GET /legal/versions" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "cookies" : {
+        "effectiveDate" : "date",
+        "version" : "string"
+      },
+      "privacy" : {
+        "effectiveDate" : "date",
+        "version" : "string"
+      },
+      "terms" : {
+        "effectiveDate" : "date",
+        "version" : "string"
+      }
+    }
+  },
+  "GET /notifications" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : [ {
+      "createdAt" : "datetime-local",
+      "id" : "uuid",
+      "isRead" : "boolean",
+      "message" : "string",
+      "referenceId" : "uuid",
+      "referenceType" : "string",
+      "title" : "string",
+      "type" : "string"
+    } ]
+  },
+  "GET /notifications/preferences" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "appointmentEnabled" : "boolean",
+      "connectionEnabled" : "boolean",
+      "mandatoryCategories" : [ "string" ],
+      "paymentEnabled" : "boolean"
+    }
+  },
+  "GET /notifications/unread-count" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : "integer"
+  },
+  "GET /patients/me" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "createdAt" : "instant-utc",
+      "email" : "string",
+      "fullName" : "string",
+      "id" : "uuid",
+      "location" : "null",
+      "phone" : "null",
+      "photoUrl" : "null",
+      "role" : "string",
+      "status" : "string"
+    }
+  },
+  "GET /payments" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "content" : [ {
+        "amount" : "decimal(1)",
+        "appointmentId" : "uuid",
+        "disputeMessage" : "null",
+        "id" : "uuid",
+        "receiptUploadedAt" : "null",
+        "receiptUrl" : "null",
+        "rejectionReason" : "null",
+        "reviewedAt" : "null",
+        "status" : "string"
+      } ],
+      "page" : {
+        "number" : "integer",
+        "size" : "integer",
+        "totalElements" : "integer",
+        "totalPages" : "integer"
+      }
+    }
+  },
+  "GET /payments/summary" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "awaitingReviewAmount" : "integer",
+      "awaitingReviewCount" : "integer",
+      "cancelledAmount" : "integer",
+      "cancelledCount" : "integer",
+      "confirmedAmount" : "integer",
+      "confirmedCount" : "integer",
+      "disputedAmount" : "integer",
+      "disputedCount" : "integer",
+      "month" : "integer",
+      "outstandingAmount" : "decimal(1)",
+      "outstandingCount" : "integer",
+      "pendingAmount" : "decimal(1)",
+      "pendingCount" : "integer",
+      "rejectedAmount" : "integer",
+      "rejectedCount" : "integer",
+      "totalExpectedAmount" : "decimal(1)",
+      "year" : "integer"
+    }
+  },
+  "GET /psychologists/me" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "createdAt" : "instant-utc",
+      "crp" : "string",
+      "description" : "null",
+      "email" : "string",
+      "experienceTime" : "null",
+      "fullName" : "string",
+      "id" : "uuid",
+      "location" : "null",
+      "officeAddress" : "null",
+      "paymentAdvanceUnit" : "null",
+      "paymentAdvanceValue" : "null",
+      "paymentTiming" : "null",
+      "phone" : "null",
+      "photoUrl" : "null",
+      "pixKey" : "null",
+      "role" : "string",
+      "specialties" : [ ],
+      "status" : "string"
+    }
+  },
+  "GET /psychologists/{id}" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "city" : "null",
+      "connectionId" : "uuid",
+      "connectionStatus" : "string",
+      "createdAt" : "instant-utc",
+      "crp" : "string",
+      "description" : "null",
+      "experienceTime" : "null",
+      "fullName" : "string",
+      "id" : "uuid",
+      "photoUrl" : "null",
+      "specialties" : [ ],
+      "state" : "null"
+    }
+  },
+  "GET /tickets" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "content" : [ ],
+      "page" : {
+        "number" : "integer",
+        "size" : "integer",
+        "totalElements" : "integer",
+        "totalPages" : "integer"
+      }
+    }
+  },
+  "GET /users/me (psicólogo)" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "birthDate" : "null",
+      "cpf" : "null",
+      "crp" : "string",
+      "description" : "null",
+      "experienceTime" : "null",
+      "fullName" : "string",
+      "phone" : "null",
+      "photoUrl" : "null",
+      "specialties" : [ ],
+      "user" : {
+        "id" : "uuid",
+        "role" : "string",
+        "username" : "string"
+      }
+    }
+  },
+  "GET /video/config" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "enabled" : "boolean"
+    }
+  },
+  "POST /auth/login" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "consentRequired" : "boolean",
+      "expiresAt" : "instant-utc",
+      "mustChangePassword" : "boolean",
+      "refreshExpiresAt" : "instant-utc",
+      "refreshToken" : "string",
+      "rememberMe" : "boolean",
+      "role" : "string",
+      "token" : "string"
+    }
+  },
+  "erro 400 validação" : {
+    "status" : 400,
+    "contentType" : "application/json",
+    "body" : {
+      "errors" : {
+        "acceptHealthData" : "string",
+        "acceptTerms" : "string",
+        "birthDate" : "string",
+        "cpf" : "string",
+        "email" : "string",
+        "fullName" : "string",
+        "password" : "string",
+        "privacyVersion" : "string",
+        "termsVersion" : "string"
+      },
+      "message" : "string",
+      "status" : "integer",
+      "timestamp" : "datetime-local"
+    }
+  },
+  "erro 401" : {
+    "status" : 401,
+    "contentType" : "application/json;charset=UTF-8",
+    "body" : {
+      "code" : "string",
+      "message" : "string",
+      "status" : "integer",
+      "timestamp" : "datetime-local"
+    }
+  },
+  "erro 404" : {
+    "status" : 404,
+    "contentType" : "application/json",
+    "body" : {
+      "message" : "string",
+      "status" : "integer",
+      "timestamp" : "datetime-local"
+    }
+  }
+}
