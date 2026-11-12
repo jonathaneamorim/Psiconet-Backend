@@ -1,5 +1,6 @@
 package com.psiconet.controllers;
 
+import com.psiconet.infra.web.SortableBy;
 import com.psiconet.model.dtos.profile.ActiveConnectionDTO;
 import com.psiconet.model.dtos.profile.ConnectionDTO;
 import com.psiconet.model.entities.access.User;
@@ -60,7 +61,7 @@ public class ConnectionController {
     @GetMapping("/pending")
     public ResponseEntity<Page<ConnectionDTO>> listPendingRequests(
             @AuthenticationPrincipal User user,
-            @PageableDefault(size = 10) Pageable pageable
+            @SortableBy({"requestedAt"}) @PageableDefault(size = 10) Pageable pageable
     ) {
         return ResponseEntity.ok(connectionService.listPendingRequests(user, pageable));
     }
@@ -68,7 +69,8 @@ public class ConnectionController {
     @GetMapping
     public ResponseEntity<Page<ActiveConnectionDTO>> listAcceptedConnections(
             @AuthenticationPrincipal User user,
-            @PageableDefault(size = 10) Pageable pageable
+            // "connectedAt" é traduzido para acceptedAt no service
+            @SortableBy({"connectedAt"}) @PageableDefault(size = 10) Pageable pageable
     ) {
         return ResponseEntity.ok(connectionService.listAcceptedConnections(user, pageable));
     }

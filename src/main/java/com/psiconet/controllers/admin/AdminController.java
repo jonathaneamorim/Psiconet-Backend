@@ -1,5 +1,6 @@
 package com.psiconet.controllers.admin;
 
+import com.psiconet.infra.web.SortableBy;
 import com.psiconet.infra.ratelimit.RateLimited;
 import com.psiconet.model.dtos.admin.*;
 import com.psiconet.model.entities.access.User;
@@ -36,7 +37,7 @@ public class AdminController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) RoleEnum role,
             @RequestParam(required = false) UserStatusEnum status,
-            @PageableDefault(size = 10, sort = "fullName") Pageable pageable
+            @SortableBy({"fullName", "createdAt"}) @PageableDefault(size = 10, sort = "fullName") Pageable pageable
     ) {
         return ResponseEntity.ok(adminService.listUsers(search, role, status, pageable));
     }

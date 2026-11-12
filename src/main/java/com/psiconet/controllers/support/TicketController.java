@@ -1,5 +1,6 @@
 package com.psiconet.controllers.support;
 
+import com.psiconet.infra.web.SortableBy;
 import com.psiconet.infra.ratelimit.RateLimited;
 import com.psiconet.model.dtos.support.TicketCreateDTO;
 import com.psiconet.model.dtos.support.TicketDetailDTO;
@@ -41,7 +42,7 @@ public class TicketController {
     public ResponseEntity<Page<TicketSummaryDTO>> listMine(
             @AuthenticationPrincipal User user,
             @RequestParam(required = false) TicketStatusEnum status,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @SortableBy({"createdAt", "updatedAt"}) @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ResponseEntity.ok(ticketService.listMine(user, status, pageable));
     }

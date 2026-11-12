@@ -1,5 +1,6 @@
 package com.psiconet.controllers.clinical;
 
+import com.psiconet.infra.web.SortableBy;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.psiconet.model.dtos.clinical.AppointmentCancelDTO;
 import com.psiconet.model.dtos.clinical.AppointmentCreateDTO;
@@ -50,7 +51,7 @@ public class AppointmentController {
     @GetMapping
     public ResponseEntity<Page<AppointmentDTO>> listMine(
             @AuthenticationPrincipal User user,
-            @PageableDefault(size = 10) Pageable pageable
+            @SortableBy({"startDateTime", "endDateTime"}) @PageableDefault(size = 10) Pageable pageable
     ) {
         return ResponseEntity.ok(appointmentService.listMyAppointments(user, pageable));
     }
