@@ -22,7 +22,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     // Teto de itens por página (SEC-08): ?size= maior é reduzido a este valor.
     @Bean
     public PageableHandlerMethodArgumentResolverCustomizer pageableLimits(
-            @Value("${psiconet.pagination.max-page-size:100}") int maxPageSize) {
+            @Value("${psiconet.pagination.max-page-size:200}") int maxPageSize) {
         return resolver -> resolver.setMaxPageSize(maxPageSize);
     }
 

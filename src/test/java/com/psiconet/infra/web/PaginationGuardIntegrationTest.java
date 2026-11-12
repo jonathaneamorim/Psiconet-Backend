@@ -27,7 +27,7 @@ class PaginationGuardIntegrationTest extends IntegrationTestBase {
     void tamanhoDePaginaTemTeto() throws Exception {
         mvc.perform(get("/appointments").param("size", "100000").header(HttpHeaders.AUTHORIZATION, bearer(psyToken)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.page.size").value(100));
+                .andExpect(jsonPath("$.page.size").value(200));
     }
 
     @Test
