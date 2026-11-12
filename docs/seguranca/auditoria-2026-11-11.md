@@ -89,6 +89,9 @@ Status: **corrigido** · **já corrigido** (resolvido antes desta auditoria; ver
   reescrever o histórico (decisão humana; coordenar com quem tem clones).
 
 ## Dependem de decisão humana/jurídica
+Consentimento de dados de saúde do **psicólogo**: o front passou a pedi-lo, mas `PsychologistRegisterRequest`
+não tem o campo e `ConsentServiceImpl` só grava/exige `HEALTH_DATA` para paciente — alinhar exige inventário,
+Política de Privacidade e nova versão (ADR 011/013).
 BUG-07a (aviso de conflito ao paciente?), BUG-07e (`NO_SHOW` e efeito na cobrança), estorno de
 cobrança aprovada em consulta cancelada, reescrita do histórico do Git, prazo de retenção de
 comprovantes rejeitados (hoje apagados no reenvio).
