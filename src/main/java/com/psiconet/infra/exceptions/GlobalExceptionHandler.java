@@ -263,7 +263,7 @@ public class GlobalExceptionHandler {
                 errors.putIfAbsent(path.substring(path.lastIndexOf('.') + 1), v.getMessage());
             });
         } else if (ex instanceof HandlerMethodValidationException hmve) {
-            hmve.getAllValidationResults().forEach(r -> r.getResolvableErrors().forEach(e ->
+            hmve.getParameterValidationResults().forEach(r -> r.getResolvableErrors().forEach(e ->
                     errors.putIfAbsent(r.getMethodParameter().getParameterName(), e.getDefaultMessage())));
         }
         log.warn("Falha na validação de parâmetros: {}", errors.keySet());

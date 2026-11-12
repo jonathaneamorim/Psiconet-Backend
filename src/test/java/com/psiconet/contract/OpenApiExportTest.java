@@ -26,6 +26,11 @@ class OpenApiExportTest extends IntegrationTestBase {
         Files.createDirectories(out.getParent());
         Files.writeString(out, response.getContentAsString(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
 
-        assertEquals(200, mvc.perform(get("/swagger-ui/index.html")).andReturn().getResponse().getStatus());
+        var swagger = mvc.perform(get("/swagger-ui/index.html")).andReturn().getResponse();
+        assertEquals(200, swagger.getStatus());
+        // CSP "default-src 'none'" vale para a API, não para o Swagger (que precisa de scripts próprios)
+        assertEquals(null, swagger.getHeader("Content-Security-Policy"));
+        assertEquals("default-src 'none'; frame-ancestors 'none'",
+                mvc.perform(get("/legal/versions")).andReturn().getResponse().getHeader("Content-Security-Policy"));
     }
 }

@@ -6,7 +6,7 @@ import com.psiconet.model.enums.RoleEnum;
 import com.psiconet.model.enums.UserStatusEnum;
 import com.psiconet.support.IntegrationTestBase;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.UUID;
@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 class VideoJoinRateLimitIntegrationTest extends IntegrationTestBase {
 
-    @MockBean VideoProvider videoProvider;
+    @MockitoBean VideoProvider videoProvider;
 
     @Test
     void excederLimiteDeEntradaRetorna429() throws Exception {

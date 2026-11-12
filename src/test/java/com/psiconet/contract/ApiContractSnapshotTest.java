@@ -34,7 +34,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
@@ -175,8 +174,7 @@ class ApiContractSnapshotTest extends IntegrationTestBase {
         if (value.isObject()) {
             ObjectNode out = objectMapper.createObjectNode();
             TreeMap<String, JsonNode> sorted = new TreeMap<>();
-            for (Iterator<Map.Entry<String, JsonNode>> it = value.fields(); it.hasNext(); ) {
-                Map.Entry<String, JsonNode> e = it.next();
+            for (Map.Entry<String, JsonNode> e : value.properties()) {
                 sorted.put(e.getKey(), signature(e.getValue()));
             }
             sorted.forEach(out::set);
