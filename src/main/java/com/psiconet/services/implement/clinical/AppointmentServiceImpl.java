@@ -298,6 +298,12 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(readOnly = true)
     public AppointmentStatsDTO getMonthlyStats(User user, int year, int month) {
+        if (month < 1 || month > 12) {
+            throw new BusinessException("month", "Mês inválido. Informe um valor entre 1 e 12.");
+        }
+        if (year < 2000 || year > 2100) {
+            throw new BusinessException("year", "Ano inválido.");
+        }
         LocalDateTime start = LocalDate.of(year, month, 1).atStartOfDay();
         LocalDateTime end = start.plusMonths(1);
 
