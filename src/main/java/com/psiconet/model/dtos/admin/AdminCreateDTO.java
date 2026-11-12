@@ -1,9 +1,8 @@
 package com.psiconet.model.dtos.admin;
 
-import com.psiconet.model.dtos.auth.PasswordPolicy;
+import com.psiconet.model.dtos.auth.StrongPassword;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.hibernate.validator.constraints.br.CPF;
 
@@ -27,7 +26,6 @@ public record AdminCreateDTO(
         String cpf,
 
         @NotBlank(message = "A senha temporária é obrigatória.")
-        @Size(max = 128, message = "Senha muito longa.")
-        @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
+        @StrongPassword
         String temporaryPassword
 ) {}

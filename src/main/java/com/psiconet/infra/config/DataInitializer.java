@@ -79,7 +79,7 @@ public class DataInitializer implements CommandLineRunner {
                     "o administrador base não foi criado.");
             return;
         }
-        if (!password.matches(PasswordPolicy.REGEX)) {
+        if (!PasswordPolicy.isValid(password)) {
             log.error("ADMIN_PASSWORD não atende à política de senha ({}). Administrador base não criado.", PasswordPolicy.MESSAGE);
             return;
         }
