@@ -1,5 +1,8 @@
 package com.psiconet.controllers.clinical;
 
+import java.util.List;
+import com.psiconet.infra.ratelimit.RateLimited;
+import com.psiconet.model.dtos.clinical.RecurrenceOccurrenceOverlapDTO;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.psiconet.model.dtos.clinical.RecurrenceRuleCreateDTO;
 import com.psiconet.model.dtos.clinical.RecurrenceRuleDTO;
@@ -47,6 +50,18 @@ public class TreatmentLinkController {
     ) {
         RecurrenceRuleDTO created = recurrenceRuleService.create(user, id, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    // Rascunho da série: quais ocorrências dos próximos 90 dias coincidem com outra consulta (ADR 019).
+    @PreAuthorize("hasRole('PSYCHOLOGIST')")
+    @PostMapping("/{id}/recurrence-rules/overlaps")
+    @RateLimited("schedule-overlap-check")
+    public ResponseEntity<List<RecurrenceOccurrenceOverlapDTO>> draftRecurrenceOverlaps(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id,
+            @Valid @RequestBody RecurrenceRuleCreateDTO dto
+    ) {
+        return ResponseEntity.ok(recurrenceRuleService.draftOverlaps(user, id, dto));
     }
 
     @GetMapping("/{id}/recurrence-rules")

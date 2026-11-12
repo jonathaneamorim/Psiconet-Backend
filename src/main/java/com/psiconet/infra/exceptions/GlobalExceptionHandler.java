@@ -63,6 +63,13 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.withCode(HttpStatus.UNAUTHORIZED.value(), "SESSION_EXPIRED", ex.getMessage()));
     }
 
+    @ExceptionHandler(ScheduleOverlapException.class)
+    public ResponseEntity<ErrorResponse> handleScheduleOverlap(ScheduleOverlapException ex) {
+        ErrorResponse body = ErrorResponse.withCode(HttpStatus.CONFLICT.value(), "SCHEDULE_OVERLAP", ex.getMessage());
+        body.setConflicts(ex.getConflicts());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(LegalVersionOutdatedException.class)
     public ResponseEntity<ErrorResponse> handleLegalVersionOutdated(LegalVersionOutdatedException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

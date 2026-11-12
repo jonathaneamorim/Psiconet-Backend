@@ -1,5 +1,8 @@
 package com.psiconet.services.implement.clinical;
 
+import java.time.Duration;
+import java.util.LinkedHashMap;
+import com.psiconet.model.dtos.clinical.OverlapSummaryDTO;
 import org.springframework.security.access.AccessDeniedException;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
@@ -65,6 +68,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final NotificationService notificationService;
     private final PaymentGenerationService paymentGenerationService;
     private final VideoProperties videoProperties;
+    private final ScheduleOverlapService scheduleOverlapService;
 
     @Override
     @Transactional
@@ -111,19 +115,14 @@ public class AppointmentServiceImpl implements AppointmentService {
                 dto.getMeetingType(), dto.getMeetingProvider(), dto.getMeetingLink(), dto.getLocation(),
                 videoProperties.isAvailable());
 
-        // Trava o psicólogo como mutex antes de checar conflito de horário: sem isso, duas requisições
-        // concorrentes de criação de agendamento para o mesmo psicólogo poderiam ambas ler "sem
-        // conflito" e ambas inserir, resultando em dois agendamentos sobrepostos (race condition
-        // clássica de check-then-insert / phantom read).
+        // Trava o psicólogo como mutex antes de checar conflito de horário: duas criações simultâneas
+        // esperam aqui, e a segunda já enxerga a primeira — sem isso o mesmo paciente poderia ficar
+        // duplicado no horário (check-then-insert / phantom read).
         userRepository.findByIdForUpdate(psychologistUser.getId());
 
-        boolean hasConflict = !appointmentRepository
-                .findConflicting(psychologist, dto.getStartDateTime(), endDateTime)
-                .isEmpty();
-
-        if (hasConflict) {
-            throw new BusinessException("startDateTime", "Já existe um agendamento neste horário.");
-        }
+        // ADR 019: outro paciente no horário ⇒ só com confirmação (409 SCHEDULE_OVERLAP); mesmo paciente ⇒ bloqueado.
+        List<Appointment> conflicts = scheduleOverlapService.conflictsFor(psychologist, dto.getStartDateTime(), endDateTime, null);
+        scheduleOverlapService.requireCreatable(conflicts, patient.getUser().getId(), dto.isAcknowledgeOverlap(), "startDateTime");
 
         Appointment appointment = new Appointment();
         appointment.setTreatmentLink(treatmentLink);
@@ -170,7 +169,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 appointment.getId()
         );
 
-        return appointmentMapper.toDto(appointment);
+        return decorated(psychologistUser, appointment);
     }
 
     @Override
@@ -233,7 +232,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             recurrenceGenerationService.ensureNextInstance(appointment.getRecurrenceRule());
         }
 
-        return appointmentMapper.toDto(appointment);
+        return decorated(user, appointment);
     }
 
     private void cancelSingle(Appointment appointment, RoleEnum cancelledBy, String reason) {
@@ -264,9 +263,13 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (user.getRole() == RoleEnum.PSYCHOLOGIST) {
             Psychologist psychologist = psychologistRepository.findByUser(user)
                     .orElseThrow(() -> new EntityNotFoundException(Psychologist.class, user.getId()));
-            return appointmentRepository
-                    .findByTreatmentLink_PsychologistOrderByStartDateTimeAsc(psychologist, pageable)
-                    .map(appointmentMapper::toDto);
+            Page<Appointment> page = appointmentRepository
+                    .findByTreatmentLink_PsychologistOrderByStartDateTimeAsc(psychologist, pageable);
+            Map<UUID, AppointmentDTO> dtos = new LinkedHashMap<>();
+            page.forEach(a -> dtos.put(a.getId(), appointmentMapper.toDto(a)));
+            // Sobreposição em lote para a página inteira (uma consulta por janela, sem N+1)
+            scheduleOverlapService.decorate(user, page.getContent(), dtos);
+            return page.map(a -> dtos.get(a.getId()));
         }
 
         if (user.getRole() == RoleEnum.PATIENT) {
@@ -288,7 +291,27 @@ public class AppointmentServiceImpl implements AppointmentService {
             // 404 em vez de 403: não confirma a existência de consultas de terceiros (anti-IDOR).
             throw new EntityNotFoundException(Appointment.class, appointmentId);
         }
-        return appointmentMapper.toDto(appointment);
+        return decorated(user, appointment);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OverlapSummaryDTO> findOverlaps(User psychologistUser, LocalDateTime start, LocalDateTime end, UUID excludeId) {
+        if (!end.isAfter(start)) {
+            throw new BusinessException("end", "O fim deve ser posterior ao início.");
+        }
+        if (Duration.between(start, end).compareTo(AppointmentLimits.MAX_DURATION) > 0) {
+            throw new BusinessException("end", "Intervalo muito longo para verificar.");
+        }
+        Psychologist psychologist = psychologistRepository.findByUser(psychologistUser)
+                .orElseThrow(() -> new EntityNotFoundException(Psychologist.class, psychologistUser.getId()));
+        return scheduleOverlapService.summarize(scheduleOverlapService.conflictsFor(psychologist, start, end, excludeId));
+    }
+
+    private AppointmentDTO decorated(User viewer, Appointment appointment) {
+        AppointmentDTO dto = appointmentMapper.toDto(appointment);
+        scheduleOverlapService.decorate(viewer, appointment, dto);
+        return dto;
     }
 
     static boolean isParticipant(Appointment appointment, User user) {

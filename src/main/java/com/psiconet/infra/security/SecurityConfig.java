@@ -117,6 +117,8 @@ public class SecurityConfig {
                         .requestMatchers("/patient/medical-records/**").hasRole("PATIENT")
                         .requestMatchers("/tickets/**").hasAnyRole("PATIENT", "PSYCHOLOGIST")
                         .requestMatchers(HttpMethod.POST, "/appointments").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.GET, "/appointments/overlaps", "/recurrence-rules/*/preview/overlaps").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.POST, "/treatment-links/*/recurrence-rules/overlaps").hasRole("PSYCHOLOGIST")
                         .requestMatchers(HttpMethod.PATCH, "/treatment-links/*/price").hasRole("PSYCHOLOGIST")
                         .requestMatchers(HttpMethod.POST, "/treatment-links/*/recurrence-rules").hasRole("PSYCHOLOGIST")
                         .requestMatchers(HttpMethod.PATCH, "/recurrence-rules/*/deactivate").hasRole("PSYCHOLOGIST")

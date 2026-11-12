@@ -1,5 +1,6 @@
 package com.psiconet.infra.exceptions;
 
+import java.util.List;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,6 +23,8 @@ public class ErrorResponse {
     private String message;
     private LocalDateTime timestamp;
     private Map<String, String> errors;
+    // Consultas no mesmo horário (code SCHEDULE_OVERLAP, ADR 019) — só em respostas ao psicólogo dono.
+    private List<?> conflicts;
 
     public ErrorResponse(int status, String message) {
         this.status = status;

@@ -29,7 +29,8 @@ public class NotificationServiceImpl implements NotificationService {
             NotificationType.APPOINTMENT_SCHEDULED,
             NotificationType.APPOINTMENT_CANCELLED,
             NotificationType.VIDEO_SESSION_REMINDER,
-            NotificationType.VIDEO_PARTICIPANT_JOINED
+            NotificationType.VIDEO_PARTICIPANT_JOINED,
+            NotificationType.SCHEDULE_OVERLAP
     );
 
     private static final Set<NotificationType> CONNECTION_TYPES = Set.of(

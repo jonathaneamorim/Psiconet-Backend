@@ -43,14 +43,17 @@ class PatientSchedulingGuardTest {
     // Classe concreta (não mockável no JDK 25+) e nunca alcançada quando o agendamento é barrado.
     private final PaymentGenerationService paymentGenerationService = null;
 
+    private final ScheduleOverlapService scheduleOverlapService = new ScheduleOverlapService(appointmentRepository);
+
     private final RecurrenceGenerationService generationService = new RecurrenceGenerationService(
-            recurrenceRuleRepository, appointmentRepository, notificationService, paymentGenerationService);
+            recurrenceRuleRepository, appointmentRepository, notificationService, paymentGenerationService,
+            scheduleOverlapService, mock(UserRepository.class));
 
     private final AppointmentServiceImpl appointmentService = new AppointmentServiceImpl(
             appointmentRepository, treatmentLinkRepository, recurrenceRuleRepository, generationService,
             mock(PaymentRepository.class), patientRepository, psychologistRepository, mock(UserRepository.class),
             new com.psiconet.mapper.AppointmentMapperImpl(), notificationService, paymentGenerationService,
-            new com.psiconet.infra.video.VideoProperties());
+            new com.psiconet.infra.video.VideoProperties(), scheduleOverlapService);
 
     private TreatmentLink linkWithPatientStatus(UserStatusEnum status) {
         User patientUser = new User();

@@ -20,14 +20,33 @@ import java.util.UUID;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
 
+    // Intervalo aberto: consulta que termina exatamente quando a outra começa NÃO conflita. Paciente e
+    // usuário vêm junto (resumo da sobreposição sem N+1 — ADR 019).
     @Query("""
         SELECT a FROM Appointment a
-        WHERE a.treatmentLink.psychologist = :psychologist
+        JOIN FETCH a.treatmentLink tl JOIN FETCH tl.patient p JOIN FETCH p.user
+        WHERE tl.psychologist = :psychologist
           AND a.status <> com.psiconet.model.enums.clinical.AppointmentStatusEnum.CANCELLED
           AND a.startDateTime < :end
           AND a.endDateTime > :start
     """)
     List<Appointment> findConflicting(
+            @Param("psychologist") Psychologist psychologist,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
+
+    // Consultas que geram ALERTA de sobreposição (ADR 019): só ACCEPTED ainda não terminadas, numa janela.
+    @Query("""
+        SELECT a FROM Appointment a
+        JOIN FETCH a.treatmentLink tl JOIN FETCH tl.patient p JOIN FETCH p.user
+        WHERE tl.psychologist = :psychologist
+          AND a.status = com.psiconet.model.enums.clinical.AppointmentStatusEnum.ACCEPTED
+          AND a.startDateTime < :end
+          AND a.endDateTime > :start
+        ORDER BY a.startDateTime
+    """)
+    List<Appointment> findAcceptedInWindow(
             @Param("psychologist") Psychologist psychologist,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end

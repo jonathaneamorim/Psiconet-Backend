@@ -55,11 +55,14 @@ public class RecurrenceGenerationService {
     }
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     private final RecurrenceRuleRepository recurrenceRuleRepository;
     private final AppointmentRepository appointmentRepository;
     private final NotificationService notificationService;
     private final PaymentGenerationService paymentGenerationService;
+    private final ScheduleOverlapService scheduleOverlapService;
+    private final com.psiconet.repositories.access.UserRepository userRepository;
 
     @Scheduled(fixedRateString = "${psiconet.recurrence.generation-fixed-rate:1800000}")
     @Transactional
@@ -69,6 +72,15 @@ public class RecurrenceGenerationService {
 
     @Transactional
     public void ensureNextInstance(RecurrenceRule candidate) {
+        ensureNextInstance(candidate, true);
+    }
+
+    /**
+     * @param notifyOverlap avisa o psicólogo se a ocorrência gerada coincidir com outra consulta. Falso só
+     *                      quando ele acabou de confirmar a sobreposição na criação da série (ADR 019).
+     */
+    @Transactional
+    public void ensureNextInstance(RecurrenceRule candidate, boolean notifyOverlap) {
         // Trava a regra no banco antes de conferir/gerar: chamadas simultâneas (job + aceite/criação pelo
         // usuário, ou duas instâncias da API) esperam aqui, e a segunda já enxerga a ocorrência criada.
         RecurrenceRule rule = recurrenceRuleRepository.findByIdForUpdate(candidate.getId()).orElse(null);
@@ -106,7 +118,7 @@ public class RecurrenceGenerationService {
         for (LocalDate date : computeOccurrenceDates(rule, from, searchLimit)) {
             rule.setLastGeneratedUntil(date);
 
-            if (tryGenerateInstance(rule, date)) {
+            if (tryGenerateInstance(rule, date, notifyOverlap)) {
                 recurrenceRuleRepository.save(rule);
                 return;
             }
@@ -115,7 +127,7 @@ public class RecurrenceGenerationService {
         recurrenceRuleRepository.save(rule);
     }
 
-    private boolean tryGenerateInstance(RecurrenceRule rule, LocalDate date) {
+    private boolean tryGenerateInstance(RecurrenceRule rule, LocalDate date, boolean notifyOverlap) {
         LocalDateTime start = date.atTime(rule.getStartTime());
         LocalDateTime end = date.atTime(rule.getEndTime());
 
@@ -123,12 +135,14 @@ public class RecurrenceGenerationService {
             return false;
         }
 
-        boolean hasConflict = !appointmentRepository
-                .findConflicting(rule.getTreatmentLink().getPsychologist(), start, end)
-                .isEmpty();
+        // Mesmo mutex da criação manual (psicólogo): sem corrida que duplique o mesmo paciente no horário.
+        userRepository.findByIdForUpdate(rule.getTreatmentLink().getPsychologist().getUser().getId());
+        List<Appointment> conflicts = scheduleOverlapService.conflictsFor(rule.getTreatmentLink().getPsychologist(), start, end, null);
 
-        if (hasConflict) {
-            log.warn("Ocorrência da regra de recorrência {} pulada por conflito de horário em {}", rule.getId(), date);
+        // ADR 019: outro paciente no horário NÃO impede a ocorrência (antes ela era pulada em silêncio e a série
+        // perdia a sessão); o psicólogo é avisado. Mesmo paciente no horário é duplicidade: essa data é pulada.
+        if (scheduleOverlapService.includesPatient(conflicts, rule.getTreatmentLink().getPatient().getUser().getId())) {
+            log.warn("Ocorrência da regra de recorrência {} pulada: o paciente já tem consulta em {}", rule.getId(), date);
             return false;
         }
 
@@ -158,6 +172,22 @@ public class RecurrenceGenerationService {
         appointment = appointmentRepository.save(appointment);
         paymentGenerationService.generatePaymentIfNeeded(appointment);
 
+        // Uma notificação por ocorrência gerada (a geração é travada por regra e acontece uma vez por data).
+        // Só data/hora: nunca o nome do outro paciente.
+        if (!conflicts.isEmpty() && notifyOverlap) {
+            notificationService.create(
+                    rule.getTreatmentLink().getPsychologist().getUser(),
+                    null,
+                    NotificationType.SCHEDULE_OVERLAP,
+                    "Horário com mais de uma consulta",
+                    "A sessão recorrente de " + date.format(DATE_FORMATTER) + " às "
+                            + start.toLocalTime().format(TIME_FORMATTER)
+                            + " coincide com outra consulta da sua agenda.",
+                    "APPOINTMENT",
+                    appointment.getId()
+            );
+        }
+
         notificationService.create(
                 rule.getTreatmentLink().getPatient().getUser(),
                 rule.getTreatmentLink().getPsychologist().getUser(),
@@ -176,6 +206,18 @@ public class RecurrenceGenerationService {
      * Calcula (sem persistir) as datas de ocorrência da regra entre {@code from} e {@code to},
      * usado tanto para materializar a próxima instância quanto para o preview do calendário.
      */
+    /** Datas/horários de início das ocorrências futuras da regra no intervalo (sem persistir). */
+    public List<LocalDateTime> upcomingStarts(RecurrenceRule rule, LocalDate from, LocalDate to) {
+        LocalDate effectiveFrom = from.isBefore(rule.getStartDate()) ? rule.getStartDate() : from;
+        LocalDate effectiveTo = rule.getEndDate() != null && rule.getEndDate().isBefore(to) ? rule.getEndDate() : to;
+        if (effectiveFrom.isAfter(effectiveTo)) return List.of();
+        LocalDateTime now = LocalDateTime.now();
+        return computeOccurrenceDates(rule, effectiveFrom, effectiveTo).stream()
+                .map(date -> date.atTime(rule.getStartTime()))
+                .filter(start -> start.isAfter(now))
+                .toList();
+    }
+
     public List<LocalDate> computeOccurrenceDates(RecurrenceRule rule, LocalDate from, LocalDate to) {
         List<LocalDate> dates = new ArrayList<>();
 

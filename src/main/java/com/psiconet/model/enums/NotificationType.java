@@ -6,6 +6,8 @@ public enum NotificationType {
     // Videochamada integrada (categoria "agendamento" das preferências) — ADR 016
     VIDEO_SESSION_REMINDER,
     VIDEO_PARTICIPANT_JOINED,
+    // Ocorrência recorrente gerada sobre outra consulta (ADR 019) — só ao psicólogo, sem nome de paciente
+    SCHEDULE_OVERLAP,
     CONNECTION_REQUESTED,
     CONNECTION_ACCEPTED,
     PAYMENT_PENDING,
