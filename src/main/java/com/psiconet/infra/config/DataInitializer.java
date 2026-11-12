@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +45,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final Environment environment;
 
     @Value("${psiconet.admin.base-email:}")
     private String email;
@@ -75,11 +78,13 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         if (normalize(email).isEmpty() || password == null || password.isBlank()) {
+            failInProduction("Nenhum administrador cadastrado e ADMIN_EMAIL/ADMIN_PASSWORD não definidos.");
             log.warn("Nenhum administrador cadastrado e ADMIN_EMAIL/ADMIN_PASSWORD não definidos: " +
                     "o administrador base não foi criado.");
             return;
         }
         if (!PasswordPolicy.isValid(password)) {
+            failInProduction("ADMIN_PASSWORD não atende à política de senha.");
             log.error("ADMIN_PASSWORD não atende à política de senha ({}). Administrador base não criado.", PasswordPolicy.MESSAGE);
             return;
         }
@@ -101,6 +106,13 @@ public class DataInitializer implements CommandLineRunner {
 
         auditService.record(null, "BASE_ADMIN_CREATED", "USER", admin.getId(), "Administrador base criado na inicialização");
         log.info("Administrador base criado (troca de senha obrigatória no primeiro acesso).");
+    }
+
+    // Em produção, subir sem nenhum administrador deixaria a plataforma sem gestão (SEC-03).
+    private void failInProduction(String reason) {
+        if (environment.acceptsProfiles(Profiles.of("prod"))) {
+            throw new IllegalStateException(reason + " Defina as variáveis e reinicie.");
+        }
     }
 
     private static String normalize(String value) {
