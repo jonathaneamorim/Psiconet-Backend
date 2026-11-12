@@ -1,5 +1,5 @@
 # Stage 1: build + testes (H2 em memória; nunca toca em banco real). Falha de teste impede a imagem.
-FROM maven:3.9.9-eclipse-temurin-17 AS builder
+FROM maven:3.9.16-eclipse-temurin-25 AS builder
 WORKDIR /build
 COPY pom.xml .
 RUN mvn -q -B dependency:go-offline
@@ -9,7 +9,7 @@ COPY docs/legal ./docs/legal
 RUN mvn -B clean package
 
 # Stage 2: runtime só com JRE, usuário sem privilégios
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:25-jre
 ENV TZ=America/Sao_Paulo
 RUN groupadd --system psiconet && useradd --system --gid psiconet --home-dir /app --shell /usr/sbin/nologin psiconet \
     && mkdir -p /app/uploads && chown -R psiconet:psiconet /app

@@ -251,7 +251,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         String payload = new String(java.util.Base64.getUrlDecoder().decode(token.split("\\.")[1]), java.nio.charset.StandardCharsets.UTF_8);
 
         assertThat(payload).doesNotContain(user.getEmail());
-        assertThat(objectMapper.readTree(payload).get("sub").asText()).isEqualTo(user.getId().toString());
+        assertThat(objectMapper.readTree(payload).get("sub").asString()).isEqualTo(user.getId().toString());
         mvc.perform(get("/users/me").header("Authorization", bearer(token))).andExpect(status().isOk());
     }
 

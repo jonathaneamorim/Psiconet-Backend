@@ -294,9 +294,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
         log.warn("Upload rejeitado por exceder o tamanho máximo permitido.");
         ErrorResponse response = new ErrorResponse(
-                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                HttpStatus.CONTENT_TOO_LARGE.value(),
                 "Arquivo muito grande. Reduza o tamanho e tente novamente."
         );
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(response);
     }
 }

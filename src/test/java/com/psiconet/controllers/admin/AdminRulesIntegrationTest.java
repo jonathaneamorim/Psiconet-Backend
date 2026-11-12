@@ -56,7 +56,7 @@ class AdminRulesIntegrationTest extends IntegrationTestBase {
                         .content(json(Map.of("currentPassword", "Admin@Teste123", "newPassword", "NovaSenha@2026"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mustChangePassword").value(false))
-                .andReturn()).get("token").asText();
+                .andReturn()).get("token").asString();
 
         // token antigo morreu; o novo ainda exige o 1º aceite dos Termos/Privacidade (ADR 013)
         mvc.perform(get("/admin/users").header("Authorization", bearer(token))).andExpect(status().isUnauthorized());
