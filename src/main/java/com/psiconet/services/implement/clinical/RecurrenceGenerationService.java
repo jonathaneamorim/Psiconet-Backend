@@ -68,7 +68,14 @@ public class RecurrenceGenerationService {
     }
 
     @Transactional
-    public void ensureNextInstance(RecurrenceRule rule) {
+    public void ensureNextInstance(RecurrenceRule candidate) {
+        // Trava a regra no banco antes de conferir/gerar: chamadas simultâneas (job + aceite/criação pelo
+        // usuário, ou duas instâncias da API) esperam aqui, e a segunda já enxerga a ocorrência criada.
+        RecurrenceRule rule = recurrenceRuleRepository.findByIdForUpdate(candidate.getId()).orElse(null);
+        if (rule == null || !Boolean.TRUE.equals(rule.getIsActive())) {
+            return;
+        }
+
         // Vínculo encerrado ou paciente sem conta ativa: não materializa novas consultas. A regra fica
         // como está (sem avançar o cursor) e volta a gerar se o vínculo/conta for reativado.
         if (!Boolean.TRUE.equals(rule.getTreatmentLink().getIsActive())
