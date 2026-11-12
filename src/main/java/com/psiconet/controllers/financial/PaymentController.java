@@ -6,6 +6,7 @@ import com.psiconet.model.dtos.financial.PaymentDisputeDTO;
 import com.psiconet.model.dtos.financial.PaymentRejectDTO;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.model.enums.financial.PaymentStatusEnum;
+import com.psiconet.infra.storage.StoredFileType;
 import com.psiconet.services.interfaces.financial.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,12 +16,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.MediaTypeFactory;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -42,11 +44,16 @@ public class PaymentController {
     @GetMapping("/{id}/receipt")
     public ResponseEntity<Resource> downloadReceipt(@AuthenticationPrincipal User user, @PathVariable UUID id) {
         Resource resource = paymentService.downloadReceipt(user, id);
-        MediaType mediaType = MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM);
+        // Tipo pela extensão que o próprio backend gravou (SEC-07). Desconhecido ⇒ download, nunca exibido.
+        Optional<MediaType> known = StoredFileType.mediaTypeOf(resource.getFilename());
+        ContentDisposition disposition = (known.isPresent() ? ContentDisposition.inline() : ContentDisposition.attachment())
+                .filename("comprovante" + extensionOf(resource.getFilename()))
+                .build();
 
         return ResponseEntity.ok()
-                .contentType(mediaType)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                .contentType(known.orElse(MediaType.APPLICATION_OCTET_STREAM))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
                 .body(resource);
     }
 
@@ -94,5 +101,11 @@ public class PaymentController {
             @RequestParam(required = false) Integer month
     ) {
         return ResponseEntity.ok(paymentService.getFinancialSummary(user, year, month));
+    }
+
+    private static String extensionOf(String fileName) {
+        int dot = fileName == null ? -1 : fileName.lastIndexOf('.');
+        String ext = dot < 0 ? "" : fileName.substring(dot).toLowerCase();
+        return ext.matches("\\.[a-z0-9]{1,5}") ? ext : "";
     }
 }

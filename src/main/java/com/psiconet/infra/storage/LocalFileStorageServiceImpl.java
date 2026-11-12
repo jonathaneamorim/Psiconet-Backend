@@ -1,13 +1,17 @@
 package com.psiconet.infra.storage;
 
 import com.psiconet.infra.exceptions.BusinessException;
+import com.psiconet.infra.exceptions.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -15,59 +19,52 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class LocalFileStorageServiceImpl implements FileStorageService {
 
-    private static final List<String> ALLOWED_CONTENT_TYPES = List.of("image/png", "image/jpeg", "application/pdf");
-
-    // Assinatura ("magic bytes") real de cada tipo permitido — o cabeçalho Content-Type enviado
-    // pelo cliente é só metadado da requisição multipart e pode ser forjado livremente, então não é
-    // suficiente para decidir o que vamos gravar em disco e depois servir de volta.
-    private static final Map<String, byte[]> MAGIC_BYTES = Map.of(
-            "image/png", new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47},
-            "image/jpeg", new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF},
-            "application/pdf", new byte[]{0x25, 0x50, 0x44, 0x46}
-    );
+    // Teto de pixels antes de decodificar: um PNG pequeno pode declarar dimensões gigantes
+    // ("bomba de descompressão") e esgotar a memória ao ser lido.
+    private static final int MAX_IMAGE_DIMENSION = 6000;
 
     @Value("${psiconet.storage.upload-dir}")
     private String uploadDir;
 
     @Override
-    public String store(MultipartFile file, String subdirectory) {
+    public String store(MultipartFile file, String subdirectory, Set<StoredFileType> allowedTypes) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException("file", "Nenhum arquivo enviado.");
         }
 
-        String contentType = FileStorageService.normalizeContentType(file.getContentType());
-        if (!ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new BusinessException("file", "Tipo de arquivo não permitido. Envie PNG, JPG ou PDF.");
-        }
+        StoredFileType type = StoredFileType.fromContentType(file.getContentType())
+                .filter(allowedTypes::contains)
+                .orElseThrow(() -> new BusinessException("file", "Tipo de arquivo não permitido. Envie " + describe(allowedTypes) + "."));
 
-        validateMagicBytes(file, contentType);
+        // O Content-Type do multipart é só metadado e pode ser forjado: o conteúdo precisa confirmar.
+        validateMagicBytes(file, type);
 
         try {
             Path baseDir = Paths.get(uploadDir).toAbsolutePath().normalize();
             Path targetDir = baseDir.resolve(subdirectory).normalize();
+            if (!targetDir.startsWith(baseDir)) {
+                throw new BusinessException("file", "Destino de arquivo inválido.");
+            }
             Files.createDirectories(targetDir);
 
-            String fileName = UUID.randomUUID() + sanitizedExtension(file.getOriginalFilename());
+            // Nome e extensão 100% gerados pelo servidor — o nome original nunca é usado.
+            Path targetPath = targetDir.resolve(UUID.randomUUID() + type.extension());
 
-            Path targetPath = targetDir.resolve(fileName).normalize();
-
-            // O nome do arquivo é sempre um UUID gerado pelo servidor, mas a extensão vem do nome
-            // original enviado pelo cliente — essa checagem garante que nada (extensão maliciosa,
-            // etc.) faça o caminho final escapar do diretório de destino.
-            if (!targetPath.startsWith(targetDir)) {
-                throw new BusinessException("file", "Nome de arquivo inválido.");
+            if (type.isImage()) {
+                writeReencodedImage(file, type, targetPath);
+            } else {
+                file.transferTo(targetPath);
             }
 
-            file.transferTo(targetPath);
-
-            return subdirectory + "/" + fileName;
+            return subdirectory + "/" + targetPath.getFileName();
         } catch (IOException e) {
             throw new BusinessException("file", "Falha ao salvar o arquivo.");
         }
@@ -80,7 +77,7 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
             Resource resource = new UrlResource(filePath.toUri());
 
             if (!resource.exists() || !resource.isReadable()) {
-                throw new BusinessException("file", "Arquivo não encontrado.");
+                throw new EntityNotFoundException("Arquivo não encontrado.");
             }
 
             return resource;
@@ -117,19 +114,15 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
         return filePath;
     }
 
-    private void validateMagicBytes(MultipartFile file, String contentType) {
-        byte[] expected = MAGIC_BYTES.get(contentType);
-        if (expected == null) {
-            return;
-        }
-
+    private void validateMagicBytes(MultipartFile file, StoredFileType type) {
+        byte[] expected = type.magicBytes();
         byte[] header = new byte[expected.length];
         try (InputStream in = file.getInputStream()) {
             int read = in.readNBytes(header, 0, header.length);
             if (read < expected.length || !Arrays.equals(header, expected)) {
                 throw new BusinessException(
                         "file",
-                        "O conteúdo do arquivo não corresponde ao tipo declarado (" + contentType + ")."
+                        "O conteúdo do arquivo não corresponde ao tipo declarado (" + type.contentType() + ")."
                 );
             }
         } catch (IOException e) {
@@ -137,16 +130,55 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
         }
     }
 
-    private String sanitizedExtension(String originalFilename) {
-        String extension = StringUtils.getFilenameExtension(originalFilename);
-
-        // Só aceita extensões curtas e alfanuméricas — descarta qualquer coisa com "/", "\", ".."
-        // ou caracteres fora do comum, que poderiam ser usados para tentar escapar do diretório de
-        // destino via um nome de arquivo original malicioso.
-        if (extension == null || !extension.matches("[a-zA-Z0-9]{1,10}")) {
-            return "";
+    /**
+     * Decodifica e regrava a imagem no mesmo formato: o arquivo final só tem pixels — metadados
+     * (EXIF com GPS do celular, comentários) e bytes extras escondidos após a imagem ficam para trás.
+     */
+    private void writeReencodedImage(MultipartFile file, StoredFileType type, Path targetPath) throws IOException {
+        BufferedImage image = readImageWithinLimits(file);
+        if (type == StoredFileType.JPEG && image.getColorModel().hasAlpha()) {
+            BufferedImage rgb = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+            rgb.createGraphics().drawImage(image, 0, 0, java.awt.Color.WHITE, null);
+            image = rgb;
         }
+        String format = type == StoredFileType.PNG ? "png" : "jpg";
+        if (!ImageIO.write(image, format, targetPath.toFile())) {
+            throw new BusinessException("file", "Não foi possível processar a imagem enviada.");
+        }
+    }
 
-        return "." + extension;
+    private BufferedImage readImageWithinLimits(MultipartFile file) throws IOException {
+        try (InputStream in = file.getInputStream(); ImageInputStream stream = ImageIO.createImageInputStream(in)) {
+            Iterator<ImageReader> readers = stream == null ? null : ImageIO.getImageReaders(stream);
+            if (readers == null || !readers.hasNext()) {
+                throw invalidImage();
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(stream, true, true);
+                if (reader.getWidth(0) > MAX_IMAGE_DIMENSION || reader.getHeight(0) > MAX_IMAGE_DIMENSION) {
+                    throw new BusinessException("file", "Imagem muito grande. Use no máximo " + MAX_IMAGE_DIMENSION + " pixels de largura e altura.");
+                }
+                BufferedImage image = reader.read(0);
+                if (image == null) throw invalidImage();
+                return image;
+            } catch (IOException | RuntimeException e) {
+                if (e instanceof BusinessException business) throw business;
+                throw invalidImage();
+            } finally {
+                reader.dispose();
+            }
+        }
+    }
+
+    private static BusinessException invalidImage() {
+        return new BusinessException("file", "Imagem inválida ou corrompida.");
+    }
+
+    private static String describe(Set<StoredFileType> types) {
+        return types.stream()
+                .sorted()
+                .map(t -> t == StoredFileType.JPEG ? "JPG" : t.name())
+                .collect(Collectors.joining(", "));
     }
 }

@@ -3,6 +3,7 @@ package com.psiconet.services.implement.profile;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.storage.FileStorageService;
+import com.psiconet.infra.storage.StoredFileType;
 import com.psiconet.mapper.PsychologistMapper;
 import com.psiconet.model.dtos.profile.BillingSettingsUpdateDTO;
 import com.psiconet.model.dtos.profile.ConnectionStatusInfoDTO;
@@ -140,7 +141,7 @@ public class PsychologistService {
 
         String previousPhotoUrl = user.getPhotoUrl();
 
-        String path = fileStorageService.store(file, "avatars");
+        String path = fileStorageService.store(file, "avatars", StoredFileType.IMAGES);
         String fileName = path.substring(path.lastIndexOf('/') + 1);
 
         user.setPhotoUrl(backendUrl + "/public/photos/" + fileName);

@@ -1,12 +1,13 @@
 package com.psiconet.controllers;
 
 import com.psiconet.infra.exceptions.BusinessException;
+import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.storage.FileStorageService;
+import com.psiconet.infra.storage.StoredFileType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,8 +30,12 @@ public class PublicFileController {
             throw new BusinessException("file", "Nome de arquivo inválido.");
         }
 
+        // Só imagens: qualquer outro arquivo em avatars/ (ex.: ".html" gravado antes da correção do
+        // SEC-07) não é servido — o tipo vem da extensão gerada pelo backend, nunca de adivinhação.
+        MediaType mediaType = StoredFileType.mediaTypeOf(filename)
+                .filter(type -> type.getType().equals("image"))
+                .orElseThrow(() -> new EntityNotFoundException("Arquivo não encontrado."));
         Resource resource = fileStorageService.loadAsResource("avatars/" + filename);
-        MediaType mediaType = MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM);
 
         return ResponseEntity.ok()
                 .contentType(mediaType)
