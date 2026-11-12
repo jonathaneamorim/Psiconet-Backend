@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum EmailTemplate {
     PASSWORD_RESET("recuperacao-senha", "Redefinição de senha — Psiconet"),
+    PASSWORD_CHANGED("senha-alterada", "Sua senha foi alterada — Psiconet"),
     WELCOME("boas-vindas", "Bem-vindo(a) à Psiconet"),
     ADMIN_INVITE("convite-administrador", "Você foi convidado(a) como administrador(a) da Psiconet"),
     TICKET_REPLIED("chamado-respondido", "Seu chamado foi respondido — Psiconet"),

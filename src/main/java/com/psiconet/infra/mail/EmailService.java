@@ -10,6 +10,9 @@ public interface EmailService {
 
     void sendPasswordResetLink(String toEmail, String fullName, String token, int expirationMinutes);
 
+    /** Aviso de que a senha mudou (redefinição ou troca), com orientação caso não tenha sido o titular. */
+    void sendPasswordChanged(String toEmail, String fullName);
+
     void sendWelcome(String toEmail, String fullName, String roleLabel);
 
     void sendAdminInvite(String toEmail, String fullName, String invitedByName);

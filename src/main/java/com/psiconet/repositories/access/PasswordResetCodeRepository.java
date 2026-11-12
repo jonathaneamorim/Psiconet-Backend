@@ -1,5 +1,6 @@
 package com.psiconet.repositories.access;
 
+import java.time.LocalDateTime;
 import com.psiconet.model.entities.access.PasswordResetCode;
 import com.psiconet.model.entities.access.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,4 +17,8 @@ public interface PasswordResetCodeRepository extends JpaRepository<PasswordReset
     @Modifying
     @Query("DELETE FROM PasswordResetCode c WHERE c.user = :user AND c.used = false")
     void deleteUnusedByUser(User user);
+
+    @Modifying
+    @Query("DELETE FROM PasswordResetCode c WHERE c.used = true OR c.expiresAt < :now")
+    int deleteUsedOrExpired(LocalDateTime now);
 }

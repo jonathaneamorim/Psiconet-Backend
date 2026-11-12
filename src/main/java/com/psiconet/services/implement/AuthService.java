@@ -209,6 +209,7 @@ public class AuthService {
                 .map(UserSession::isRememberMe)
                 .orElse(false);
         sessionService.revokeAll(user, SessionRevocationReasonEnum.PASSWORD_CHANGED);
+        emailService.sendPasswordChanged(user.getEmail(), user.getFullName());
         return toResponse(sessionService.start(user, rememberMe));
     }
 
