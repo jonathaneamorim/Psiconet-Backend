@@ -2,7 +2,8 @@
 
 > Fonte oficial de verdade do backend (substitui o antigo `GEMINI.md`, removido).
 > Projeto irmão: **Psiconet-Frontend** (Next.js) — `../Psiconet-Frontend/CLAUDE.md`.
-> Decisões registradas em `docs/decisoes/` (ADRs 000–016). Diagnóstico inicial: `docs/diagnostico-fase0.md`.
+> Decisões registradas em `docs/decisoes/` (ADRs 000–017). Diagnóstico inicial: `docs/diagnostico-fase0.md`.
+> Segurança: `docs/seguranca/` (auditoria 2026-11-11 e matriz de autorização por endpoint).
 > Documentos legais e inventário de dados: `docs/legal/`.
 
 ## Produto
@@ -20,7 +21,7 @@ cobranças via Pix, notificações, **sessões on-line na Sala Psiconet (vídeo 
 ## Comandos
 ```bash
 ./mvnw spring-boot:run                  # API em :8080 (lê .env; se mvnw sem +x: sh mvnw ...)
-./mvnw test                             # 150+ testes, H2 — nunca toca no banco de dev
+./mvnw test                             # 250+ testes, H2 — nunca toca no banco de dev nem lê o .env
 ./mvnw -DskipTests package              # jar em target/
 docker compose up -d                    # Postgres (5432) + pgAdmin (5050)
 docker compose --profile video up -d livekit   # LiveKit local (:7880) p/ testar a Sala Psiconet (VIDEO_* no .env)
@@ -28,7 +29,7 @@ scripts/dev-celular.sh [stop]           # Sala Psiconet pelo celular: túneis HT
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # inclui chamados de exemplo (DevDataSeeder)
 ```
-Swagger: `http://localhost:8080/swagger-ui/index.html`.
+Swagger: `http://localhost:8080/swagger-ui/index.html` — só com `API_DOCS_ENABLED=true` no `.env` (desligado por padrão e proibido em prod).
 
 ## Estrutura (`src/main/java/com/psiconet`)
 ```
@@ -42,6 +43,7 @@ controllers/            REST: AuthController, UserController, NotificationContro
                         PatientMedicalRecordController (/patient/medical-records — paciente)
 infra/
   config/               DataInitializer (admin base), SchemaPatches (DDL idempotente), DevDataSeeder (perfil dev),
+                        ProductionConfigValidator (perfil prod: recusa subir com config insegura/incompleta),
                         ClinicalDataMaintenance (migração legado + rotação de chave), AsyncConfig, TicketProperties
   crypto/               ClinicalCryptoService (AES-256-GCM, envelope), MasterKeyProvider/EnvMasterKeyProvider
   exceptions/           BusinessException(400), ConflictException(409), EntityNotFound(404), AccountStatus(403),
@@ -51,13 +53,15 @@ infra/
   mail/                 EmailService (fachada), EmailDispatcher (AFTER_COMMIT + @Async), EmailRenderer, EmailTemplate
   ratelimit/            @RateLimited, RateLimitInterceptor, RateLimiterService, RateLimitProperties
   richtext/             RichTextSanitizer (whitelist do JSON do editor)
-  security/             SecurityConfig (+ cabeçalhos), SecurityFilter (JWT + status + versão + sessão + aceite),
-                        TokenService (acesso 15 min, claim sid), SessionService (refresh rotativo), SessionProperties,
+  security/             SecurityConfig (+ cabeçalhos, papel por rota), SecurityFilter (JWT + status + versão + sessão + aceite),
+                        TokenService (acesso 15 min, subject = id, claim sid), SessionService (refresh rotativo), SessionProperties,
                         JsonSecurityErrorHandlers
+  storage/              FileStorageService/LocalFileStorageServiceImpl, StoredFileType (tipo/extensão pelo conteúdo)
   text/                 TextSanitizer, CpfMasker
   video/                VideoProvider (abstração), VideoProperties (psiconet.video.*), livekit/LiveKitVideoProvider,
                         VideoAccessException (códigos VIDEO_*), InvalidWebhookSignatureException
-  web/                  ClientIpResolver (+ X-Client-User-Agent), UserAgentSummarizer, WebMvcConfig, ClinicalNoStoreFilter,
+  web/                  ClientIpResolver (+ X-Client-User-Agent), UserAgentSummarizer, WebMvcConfig (teto de página 100),
+                        @SortableBy + PageableSortGuard (ordenação por lista branca), ClinicalNoStoreFilter,
                         RequestSizeLimitFilter (corpo ≤ 2 MB sem arquivo; webhook de vídeo ≤ 64 KB ⇒ 413)
 mapper/ model/{entities,dtos,enums}/ repositories/ services/{interfaces,implement}/
 src/main/resources/templates/email/   layout/, components/, <template>.html, text/<template>.txt
@@ -73,7 +77,11 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   `SESSION_EXPIRED`, `RATE_LIMITED`, `PAYLOAD_TOO_LARGE`, `ACCOUNT_INACTIVE|BLOCKED|PENDING`, `CLINICAL_UNAVAILABLE`,
   `VIDEO_NOT_IN_APP`, `VIDEO_APPOINTMENT_INACTIVE`, `VIDEO_WINDOW_NOT_OPEN`, `VIDEO_WINDOW_CLOSED`, `VIDEO_UNAVAILABLE`.
 - Sucesso com mensagem sempre em JSON (`MessageResponseDTO`) — nunca texto puro (causa do bug do cadastro, ADR 002).
-- Recurso de outro usuário → **404** (anti-IDOR); permissão de papel → 403 via `@PreAuthorize`.
+- Recurso de outro usuário → **404** (anti-IDOR, mesma resposta de id inexistente); participante sem a permissão do
+  papel → 403 (`AccessDeniedException`). Papel exigido **também por rota** no `SecurityConfig` (o `@PreAuthorize` roda
+  depois do `@Valid`). Endpoint novo entra na `docs/seguranca/matriz-de-autorizacao.md` e no `AuthorizationMatrixIntegrationTest`.
+- `Pageable` aceita `?sort=` só dos campos em `@SortableBy`; senha nova sempre com `@StrongPassword` (≤ 72 bytes, limite do BCrypt).
+- Upload só via `FileStorageService.store(file, dir, StoredFileType...)`: nunca usar nome/extensão do cliente.
 - Textos livres passam por `TextSanitizer`; mensagens e e-mails em **pt-BR**.
 - Schema: `ddl-auto=update` só aditivo; ajustes que o Hibernate não faz vão em `SchemaPatches` (idempotentes,
   não destrutivos, só Postgres). Recomendação: Flyway antes de produção (ADR 001).
@@ -167,6 +175,9 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 
 ## Segurança e LGPD
 - Segredos só por ambiente (`JWT_SECRET` ≥ 32 chars obrigatório; `CLINICAL_MASTER_KEYS`; `ADMIN_*`; SMTP; `VIDEO_API_SECRET`).
+  Produção roda com `SPRING_PROFILES_ACTIVE=prod` (`ProductionConfigValidator`): sem senha do banco, chaves clínicas,
+  e-mail, admin base ou URLs públicas https a API não sobe. No Docker Compose, `$` em valor do `.env` vira variável — use `$$`.
+- Imagem: JRE, usuário não-root, testes no build, TZ `America/Sao_Paulo`; uploads no volume `uploads_prod`.
 - Dados clínicos: AES-256-GCM por campo, DEK por prontuário, KEK versionada fora do banco; sem chave → 503.
   Respostas clínicas com `Cache-Control: no-store`. Triggers no Postgres bloqueiam DELETE em prontuário/anotações e
   UPDATE/DELETE em auditorias/adendos/anotação finalizada.
@@ -189,6 +200,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 - Aceitar `role`/`status`/ids de dono do cliente para decidir permissão; criar caminho de promoção a ADMIN.
 - Expor entidade JPA, CPF completo ou conteúdo clínico a admin, em e-mail, notificação, log ou mensagem de erro.
 - Aceitar HTML do cliente no conteúdo clínico (só JSON do editor, validado pelo `RichTextSanitizer`).
-- Rodar testes contra o banco de desenvolvimento; usar `th:utext` com dado de usuário.
+- Rodar testes contra o banco de desenvolvimento ou deixar a suíte depender do `.env` local; usar `th:utext` com dado de usuário.
+- Responder 400 "sem permissão" para recurso de terceiros; ordenar por campo livre; gravar arquivo com a extensão do cliente.
 - Alterar documento legal sem subir a versão/histórico; aceitar data, IP ou versão de aceite vindos do cliente;
   apagar/alterar registro de `consentimento_usuario`; guardar refresh token em texto claro.
