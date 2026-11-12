@@ -1,5 +1,6 @@
 package com.psiconet.controllers.clinical;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.psiconet.model.dtos.clinical.AppointmentCancelDTO;
 import com.psiconet.model.dtos.clinical.AppointmentCreateDTO;
 import com.psiconet.model.dtos.clinical.AppointmentDTO;
@@ -28,6 +29,7 @@ public class AppointmentController {
     private final AppointmentService appointmentService;
     private final VideoSessionService videoSessionService;
 
+    @PreAuthorize("hasRole('PSYCHOLOGIST')")
     @PostMapping
     public ResponseEntity<AppointmentDTO> create(
             @AuthenticationPrincipal User user,

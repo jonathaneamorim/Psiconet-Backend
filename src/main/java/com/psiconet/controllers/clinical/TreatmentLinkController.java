@@ -1,5 +1,6 @@
 package com.psiconet.controllers.clinical;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.psiconet.model.dtos.clinical.RecurrenceRuleCreateDTO;
 import com.psiconet.model.dtos.clinical.RecurrenceRuleDTO;
 import com.psiconet.model.dtos.clinical.TreatmentLinkPriceUpdateDTO;
@@ -26,6 +27,7 @@ public class TreatmentLinkController {
     private final TreatmentLinkService treatmentLinkService;
     private final RecurrenceRuleService recurrenceRuleService;
 
+    @PreAuthorize("hasRole('PSYCHOLOGIST')")
     @PatchMapping("/{id}/price")
     public ResponseEntity<Void> updatePrice(
             @AuthenticationPrincipal User user,
@@ -36,6 +38,7 @@ public class TreatmentLinkController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('PSYCHOLOGIST')")
     @PostMapping("/{id}/recurrence-rules")
     public ResponseEntity<RecurrenceRuleDTO> createRecurrenceRule(
             @AuthenticationPrincipal User user,

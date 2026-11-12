@@ -110,6 +110,19 @@ public class SecurityConfig {
                         // Rotas administrativas protegidas
                         .requestMatchers("/admin/**").hasRole("ADMIN")
 
+                        // Papel exigido já na rota (SEC-13): barra antes da validação do corpo, que
+                        // senão responderia 400 a quem nem pode usar o endpoint. Os controllers repetem
+                        // com @PreAuthorize e os services conferem dono/vínculo (404 para terceiros).
+                        .requestMatchers("/medical-records/**").hasRole("PSYCHOLOGIST")
+                        .requestMatchers("/patient/medical-records/**").hasRole("PATIENT")
+                        .requestMatchers("/tickets/**").hasAnyRole("PATIENT", "PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.POST, "/appointments").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.PATCH, "/treatment-links/*/price").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.POST, "/treatment-links/*/recurrence-rules").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.PATCH, "/recurrence-rules/*/deactivate").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.PATCH, "/payments/*/approve", "/payments/*/reject").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.POST, "/payments/*/receipt", "/payments/*/dispute").hasRole("PATIENT")
+
                         // Outras rotas precisam de autenticação
                         .anyRequest().authenticated()
                 )

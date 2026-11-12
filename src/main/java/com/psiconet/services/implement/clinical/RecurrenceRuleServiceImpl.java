@@ -1,5 +1,6 @@
 package com.psiconet.services.implement.clinical;
 
+import org.springframework.security.access.AccessDeniedException;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.video.VideoProperties;
@@ -40,14 +41,14 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
     @Transactional
     public RecurrenceRuleDTO create(User psychologistUser, UUID treatmentLinkId, RecurrenceRuleCreateDTO dto) {
         if (psychologistUser.getRole() != RoleEnum.PSYCHOLOGIST) {
-            throw new BusinessException("recurrenceRule", "Somente psicólogos podem criar regras de recorrência.");
+            throw new AccessDeniedException("Somente psicólogos podem criar regras de recorrência.");
         }
 
         TreatmentLink treatmentLink = treatmentLinkRepository.findById(treatmentLinkId)
                 .orElseThrow(() -> new EntityNotFoundException(TreatmentLink.class, treatmentLinkId));
 
         if (!treatmentLink.getPsychologist().getUser().getId().equals(psychologistUser.getId())) {
-            throw new BusinessException("recurrenceRule", "Você não tem permissão para criar regras neste vínculo.");
+            throw new EntityNotFoundException(TreatmentLink.class, treatmentLinkId);
         }
 
         if (!Boolean.TRUE.equals(treatmentLink.getIsActive())) {
@@ -144,7 +145,7 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
         boolean isPatient = treatmentLink.getPatient().getUser().getId().equals(user.getId());
 
         if (!isPsychologist && !isPatient) {
-            throw new BusinessException("recurrenceRule", "Você não tem permissão para visualizar as regras deste vínculo.");
+            throw new EntityNotFoundException(TreatmentLink.class, treatmentLinkId);
         }
 
         return recurrenceRuleRepository
@@ -159,7 +160,11 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
                 .orElseThrow(() -> new EntityNotFoundException(RecurrenceRule.class, ruleId));
 
         if (!rule.getTreatmentLink().getPsychologist().getUser().getId().equals(psychologistUser.getId())) {
-            throw new BusinessException("recurrenceRule", "Você não tem permissão para desativar esta regra.");
+            // Paciente do vínculo conhece a regra (403); qualquer outro usuário não deve saber que ela existe (404).
+            if (rule.getTreatmentLink().getPatient().getUser().getId().equals(psychologistUser.getId())) {
+                throw new AccessDeniedException("Somente o psicólogo do vínculo pode desativar esta regra.");
+            }
+            throw new EntityNotFoundException(RecurrenceRule.class, ruleId);
         }
 
         rule.setIsActive(false);
@@ -176,7 +181,7 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
         boolean isPatient = rule.getTreatmentLink().getPatient().getUser().getId().equals(user.getId());
 
         if (!isPsychologist && !isPatient) {
-            throw new BusinessException("recurrenceRule", "Você não tem permissão para visualizar esta regra.");
+            throw new EntityNotFoundException(RecurrenceRule.class, ruleId);
         }
 
         if (!to.isAfter(from)) {

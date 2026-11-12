@@ -1,5 +1,6 @@
 package com.psiconet.services.implement.financial;
 
+import org.springframework.security.access.AccessDeniedException;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.storage.FileStorageService;
@@ -62,8 +63,9 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = findPaymentOrThrow(paymentId);
         TreatmentLink treatmentLink = payment.getTreatmentLink();
 
+        requireParticipant(patientUser, payment);
         if (!treatmentLink.getPatient().getUser().getId().equals(patientUser.getId())) {
-            throw new BusinessException("payment", "Você não tem permissão para enviar o comprovante deste pagamento.");
+            throw new AccessDeniedException("Somente o paciente envia o comprovante deste pagamento.");
         }
 
         if (!RECEIPT_UPLOADABLE_STATUSES.contains(payment.getStatus())) {
@@ -167,8 +169,9 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = findPaymentOrThrow(paymentId);
         TreatmentLink treatmentLink = payment.getTreatmentLink();
 
+        requireParticipant(patientUser, payment);
         if (!treatmentLink.getPatient().getUser().getId().equals(patientUser.getId())) {
-            throw new BusinessException("payment", "Você não tem permissão para contestar este pagamento.");
+            throw new AccessDeniedException("Somente o paciente pode contestar este pagamento.");
         }
 
         if (payment.getStatus() != PaymentStatusEnum.REJECTED) {
@@ -207,7 +210,7 @@ public class PaymentServiceImpl implements PaymentService {
             return paymentRepository.findByPatient(patient, status, pageable).map(paymentMapper::toDto);
         }
 
-        throw new BusinessException("payment", "Apenas psicólogos e pacientes possuem pagamentos.");
+        throw new AccessDeniedException("Apenas psicólogos e pacientes possuem pagamentos.");
     }
 
     @Override
@@ -245,7 +248,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .orElseThrow(() -> new EntityNotFoundException(Patient.class, user.getId()));
             rows = paymentRepository.aggregateByPatientAndAppointmentMonth(patient, start, end);
         } else {
-            throw new BusinessException("payment", "Apenas psicólogos e pacientes possuem pagamentos.");
+            throw new AccessDeniedException("Apenas psicólogos e pacientes possuem pagamentos.");
         }
 
         Map<PaymentStatusEnum, long[]> counts = new EnumMap<>(PaymentStatusEnum.class);
@@ -311,18 +314,24 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void validateOwnership(User user, Payment payment) {
+        requireParticipant(user, payment);
+    }
+
+    // Pagamento de terceiros: 404, sem confirmar que existe (anti-IDOR).
+    private void requireParticipant(User user, Payment payment) {
         TreatmentLink treatmentLink = payment.getTreatmentLink();
         boolean isPsychologist = treatmentLink.getPsychologist().getUser().getId().equals(user.getId());
         boolean isPatient = treatmentLink.getPatient().getUser().getId().equals(user.getId());
 
         if (!isPsychologist && !isPatient) {
-            throw new BusinessException("payment", "Você não tem permissão para acessar este pagamento.");
+            throw new EntityNotFoundException(Payment.class, payment.getId());
         }
     }
 
     private void validatePsychologistOwnership(User psychologistUser, Payment payment) {
+        requireParticipant(psychologistUser, payment);
         if (!payment.getTreatmentLink().getPsychologist().getUser().getId().equals(psychologistUser.getId())) {
-            throw new BusinessException("payment", "Você não tem permissão para revisar este pagamento.");
+            throw new AccessDeniedException("Somente o psicólogo do vínculo revisa este pagamento.");
         }
     }
 

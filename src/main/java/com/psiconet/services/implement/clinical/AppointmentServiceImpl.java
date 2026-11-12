@@ -1,5 +1,6 @@
 package com.psiconet.services.implement.clinical;
 
+import org.springframework.security.access.AccessDeniedException;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.video.VideoProperties;
@@ -70,7 +71,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     public AppointmentDTO create(User psychologistUser, AppointmentCreateDTO dto) {
         // Retorna erro caso não seja o psicologo a criar o agendamento
         if (psychologistUser.getRole() != RoleEnum.PSYCHOLOGIST) {
-            throw new BusinessException("appointment", "Somente psicólogos podem criar agendamentos.");
+            throw new AccessDeniedException("Somente psicólogos podem criar agendamentos.");
         }
 
         Psychologist psychologist = psychologistRepository.findByUser(psychologistUser)
@@ -180,7 +181,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         boolean isPatient = treatmentLink.getPatient().getUser().getId().equals(user.getId());
 
         if (!isPsychologist && !isPatient) {
-            throw new BusinessException("appointment", "Você não tem permissão para cancelar este agendamento.");
+            throw new EntityNotFoundException(Appointment.class, appointmentId);
         }
 
         if (appointment.getStatus() != AppointmentStatusEnum.ACCEPTED) {
@@ -274,7 +275,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                     .map(appointmentMapper::toDto);
         }
 
-        throw new BusinessException("appointment", "Apenas psicólogos e pacientes possuem agendamentos.");
+        throw new AccessDeniedException("Apenas psicólogos e pacientes possuem agendamentos.");
     }
 
     @Override
@@ -311,7 +312,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                     .orElseThrow(() -> new EntityNotFoundException(Patient.class, user.getId()));
             appointments = appointmentRepository.findByTreatmentLink_PatientAndStartDateTimeBetween(patient, start, end);
         } else {
-            throw new BusinessException("appointment", "Apenas psicólogos e pacientes possuem agendamentos.");
+            throw new AccessDeniedException("Apenas psicólogos e pacientes possuem agendamentos.");
         }
 
         Map<AppointmentStatusEnum, Long> counts = appointments.stream()

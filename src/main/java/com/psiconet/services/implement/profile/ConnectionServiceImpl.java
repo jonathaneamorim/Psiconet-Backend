@@ -1,5 +1,6 @@
 package com.psiconet.services.implement.profile;
 
+import org.springframework.security.access.AccessDeniedException;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.mapper.ConnectionMapper;
@@ -272,14 +273,15 @@ public class ConnectionServiceImpl implements ConnectionService {
         Connection connection = connectionRepository.findById(connectionId)
                 .orElseThrow(() -> new EntityNotFoundException(Connection.class, connectionId));
 
-        if (mustBeReceiver) {
-            if (!connection.getReceiver().getId().equals(user.getId())) {
-                throw new BusinessException("connection", "Você não tem permissão para realizar esta ação.");
-            }
-        } else {
-            if (!connection.getSender().getId().equals(user.getId()) && !connection.getReceiver().getId().equals(user.getId())) {
-                throw new BusinessException("connection", "Você não tem permissão para realizar esta ação.");
-            }
+        boolean isSender = connection.getSender().getId().equals(user.getId());
+        boolean isReceiver = connection.getReceiver().getId().equals(user.getId());
+
+        // Conexão de terceiros: 404, sem confirmar que existe (anti-IDOR).
+        if (!isSender && !isReceiver) {
+            throw new EntityNotFoundException(Connection.class, connectionId);
+        }
+        if (mustBeReceiver && !isReceiver) {
+            throw new AccessDeniedException("Somente quem recebeu a solicitação pode respondê-la.");
         }
 
         return connection;

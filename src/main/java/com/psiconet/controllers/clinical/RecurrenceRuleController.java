@@ -1,5 +1,6 @@
 package com.psiconet.controllers.clinical;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.services.interfaces.clinical.RecurrenceRuleService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class RecurrenceRuleController {
 
     private final RecurrenceRuleService recurrenceRuleService;
 
+    @PreAuthorize("hasRole('PSYCHOLOGIST')")
     @PatchMapping("/{id}/deactivate")
     public ResponseEntity<Void> deactivate(@AuthenticationPrincipal User user, @PathVariable UUID id) {
         recurrenceRuleService.deactivate(user, id);

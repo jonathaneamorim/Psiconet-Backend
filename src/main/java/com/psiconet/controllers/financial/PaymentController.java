@@ -1,5 +1,6 @@
 package com.psiconet.controllers.financial;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.psiconet.model.dtos.financial.FinancialSummaryDTO;
 import com.psiconet.model.dtos.financial.PaymentDTO;
 import com.psiconet.model.dtos.financial.PaymentDisputeDTO;
@@ -32,6 +33,7 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    @PreAuthorize("hasRole('PATIENT')")
     @PostMapping(value = "/{id}/receipt", consumes = "multipart/form-data")
     public ResponseEntity<PaymentDTO> uploadReceipt(
             @AuthenticationPrincipal User user,
@@ -57,11 +59,13 @@ public class PaymentController {
                 .body(resource);
     }
 
+    @PreAuthorize("hasRole('PSYCHOLOGIST')")
     @PatchMapping("/{id}/approve")
     public ResponseEntity<PaymentDTO> approve(@AuthenticationPrincipal User user, @PathVariable UUID id) {
         return ResponseEntity.ok(paymentService.approve(user, id));
     }
 
+    @PreAuthorize("hasRole('PSYCHOLOGIST')")
     @PatchMapping("/{id}/reject")
     public ResponseEntity<PaymentDTO> reject(
             @AuthenticationPrincipal User user,
@@ -71,6 +75,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.reject(user, id, dto));
     }
 
+    @PreAuthorize("hasRole('PATIENT')")
     @PostMapping("/{id}/dispute")
     public ResponseEntity<PaymentDTO> dispute(
             @AuthenticationPrincipal User user,
