@@ -1,6 +1,6 @@
 package com.psiconet.model.dtos.clinical.record;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

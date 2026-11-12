@@ -1,6 +1,6 @@
 package com.psiconet.services.implement.clinical;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfWriter;
 import com.psiconet.model.dtos.clinical.record.PatientRecordViewDTO;
@@ -152,7 +152,7 @@ public class MedicalRecordPdfService {
     }
 
     private Element renderBlock(JsonNode node) {
-        String type = node.path("type").asText();
+        String type = node.path("type").asString();
         return switch (type) {
             case "heading" -> {
                 int level = node.path("attrs").path("level").asInt(1);
@@ -187,7 +187,7 @@ public class MedicalRecordPdfService {
     }
 
     private static int alignment(JsonNode node) {
-        return switch (node.path("attrs").path("textAlign").asText("")) {
+        return switch (node.path("attrs").path("textAlign").asString("")) {
             case "center" -> Element.ALIGN_CENTER;
             case "right" -> Element.ALIGN_RIGHT;
             default -> Element.ALIGN_LEFT;
@@ -204,18 +204,18 @@ public class MedicalRecordPdfService {
         Paragraph p = new Paragraph();
         p.setLeading(14);
         for (JsonNode child : node.path("content")) {
-            if ("hardBreak".equals(child.path("type").asText())) {
+            if ("hardBreak".equals(child.path("type").asString())) {
                 p.add(Chunk.NEWLINE);
                 continue;
             }
             int style = Font.NORMAL;
             Float sizeFromMark = null;
             for (JsonNode mark : child.path("marks")) {
-                switch (mark.path("type").asText()) {
+                switch (mark.path("type").asString()) {
                     case "bold" -> style |= Font.BOLD;
                     case "italic" -> style |= Font.ITALIC;
                     case "underline" -> style |= Font.UNDERLINE;
-                    case "textStyle" -> sizeFromMark = pdfSize(mark.path("attrs").path("fontSize").asText(""));
+                    case "textStyle" -> sizeFromMark = pdfSize(mark.path("attrs").path("fontSize").asString(""));
                     default -> { }
                 }
             }
@@ -223,7 +223,7 @@ public class MedicalRecordPdfService {
             Font font = baseOverride != null
                     ? FontFactory.getFont(FontFactory.HELVETICA, size, baseOverride.getStyle() | style)
                     : FontFactory.getFont(FontFactory.HELVETICA, size, style);
-            p.add(new Chunk(child.path("text").asText(), font));
+            p.add(new Chunk(child.path("text").asString(), font));
         }
         return p;
     }

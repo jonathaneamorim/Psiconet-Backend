@@ -1,6 +1,6 @@
 package com.psiconet.controllers.clinical;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.model.entities.clinical.TreatmentLink;
 import com.psiconet.model.enums.RoleEnum;
@@ -71,7 +71,7 @@ class MedicalRecordIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.status").value("FINALIZED"))
                 .andExpect(jsonPath("$.integrityHash", matchesPattern("[0-9a-f]{64}")))
                 .andExpect(jsonPath("$.integrityVerified").value(true))
-                .andReturn()).get("id").asText();
+                .andReturn()).get("id").asString();
     }
 
     @Test
@@ -110,7 +110,7 @@ class MedicalRecordIntegrationTest extends IntegrationTestBase {
     @Test
     void anotacaoRascunhoFinalizacaoImutavelEAdendo() throws Exception {
         JsonNode note = createNote("RECORD", SECRET);
-        String id = note.get("id").asText();
+        String id = note.get("id").asString();
 
         // autosave do rascunho
         mvc.perform(put("/medical-records/notes/" + id + "/draft").header("Authorization", bearer(psyToken))
@@ -160,9 +160,9 @@ class MedicalRecordIntegrationTest extends IntegrationTestBase {
     void fluxoDeAcessoDoPaciente() throws Exception {
         mvc.perform(put("/medical-records/links/" + link.getId()).header("Authorization", bearer(psyToken))
                 .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("demand", SECRET)))).andExpect(status().isOk());
-        String recordNote = createNote("RECORD", "Registro documental da sessão").get("id").asText();
+        String recordNote = createNote("RECORD", "Registro documental da sessão").get("id").asString();
         finalizeNote(recordNote);
-        String privateNote = createNote("PRIVATE", "Hipótese pessoal do profissional").get("id").asText();
+        String privateNote = createNote("PRIVATE", "Hipótese pessoal do profissional").get("id").asString();
         finalizeNote(privateNote);
         createNote("RECORD", "Rascunho não finalizado");
 
@@ -171,7 +171,7 @@ class MedicalRecordIntegrationTest extends IntegrationTestBase {
                         .header("Authorization", bearer(patientToken)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("PENDING"))
-                .andReturn()).get("id").asText();
+                .andReturn()).get("id").asString();
 
         mvc.perform(post("/patient/medical-records/links/" + link.getId() + "/access-requests").header("Authorization", bearer(patientToken)))
                 .andExpect(status().isConflict());
@@ -217,7 +217,7 @@ class MedicalRecordIntegrationTest extends IntegrationTestBase {
     @Test
     void negativaExigeJustificativaQueNaoVaiNaNotificacao() throws Exception {
         String requestId = body(mvc.perform(post("/patient/medical-records/links/" + link.getId() + "/access-requests")
-                .header("Authorization", bearer(patientToken))).andExpect(status().isCreated()).andReturn()).get("id").asText();
+                .header("Authorization", bearer(patientToken))).andExpect(status().isCreated()).andReturn()).get("id").asString();
 
         mvc.perform(post("/medical-records/access-requests/" + requestId + "/deny").header("Authorization", bearer(psyToken))
                         .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("justification", "curta"))))
@@ -270,8 +270,8 @@ class MedicalRecordIntegrationTest extends IntegrationTestBase {
     void psicologoExportaPdfComOuSemAnotacoesPessoais() throws Exception {
         mvc.perform(put("/medical-records/links/" + link.getId()).header("Authorization", bearer(psyToken))
                 .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("demand", "Demanda documental")))).andExpect(status().isOk());
-        finalizeNote(createNote("RECORD", "Registro de evolucao visivel").get("id").asText());
-        finalizeNote(createNote("PRIVATE", "Hipotese pessoal reservada").get("id").asText());
+        finalizeNote(createNote("RECORD", "Registro de evolucao visivel").get("id").asString());
+        finalizeNote(createNote("PRIVATE", "Hipotese pessoal reservada").get("id").asString());
         createNote("RECORD", "Rascunho nunca exportado");
 
         byte[] documental = mvc.perform(get("/medical-records/links/" + link.getId() + "/pdf").header("Authorization", bearer(psyToken)))
@@ -311,7 +311,7 @@ class MedicalRecordIntegrationTest extends IntegrationTestBase {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.content.content[0].attrs.textAlign").value("center"))
                 .andExpect(jsonPath("$.content.content[0].content[0].marks[0].attrs.fontSize").value("20px"))
-                .andReturn()).get("id").asText();
+                .andReturn()).get("id").asString();
         finalizeNote(id);
         mvc.perform(get("/medical-records/links/" + link.getId() + "/pdf").header("Authorization", bearer(psyToken)))
                 .andExpect(status().isOk());

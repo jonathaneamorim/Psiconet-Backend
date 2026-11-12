@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -80,11 +80,11 @@ class ErrorHandlingIntegrationTest extends IntegrationTestBase {
         assertFalse(bodyText.contains("must not"), bodyText);
     }
 
-    private MockHttpServletRequestBuilder authed(MockHttpServletRequestBuilder request) {
+    private <B extends AbstractMockHttpServletRequestBuilder<B>> B authed(B request) {
         return request.header(HttpHeaders.AUTHORIZATION, bearer(psyToken));
     }
 
-    private void assertError(int status, MockHttpServletRequestBuilder request) throws Exception {
+    private void assertError(int status, AbstractMockHttpServletRequestBuilder<?> request) throws Exception {
         MvcResult result = mvc.perform(request).andReturn();
         String bodyText = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
         assertEquals(status, result.getResponse().getStatus(), bodyText);

@@ -1,6 +1,6 @@
 package com.psiconet.services.implement.clinical;
 
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.psiconet.infra.richtext.RichTextSanitizer;
 import com.psiconet.model.entities.clinical.MedicalRecord;
 import com.psiconet.model.entities.clinical.SessionNote;

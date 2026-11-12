@@ -1,6 +1,6 @@
 package com.psiconet.model.dtos.clinical.record;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.psiconet.model.enums.clinical.SessionNoteStatusEnum;
 import com.psiconet.model.enums.clinical.SessionNoteTypeEnum;
 

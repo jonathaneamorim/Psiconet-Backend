@@ -1,6 +1,6 @@
 package com.psiconet.controllers.clinical;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.psiconet.infra.video.InvalidWebhookSignatureException;
 import com.psiconet.infra.video.VideoProperties;
 import com.psiconet.infra.video.VideoProvider;
@@ -120,13 +120,13 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
         assertEquals(200, result.getResponse().getStatus());
         JsonNode body = body(result);
 
-        assertEquals("IN_APP", body.get("meetingProvider").asText());
+        assertEquals("IN_APP", body.get("meetingProvider").asString());
         assertTrue(body.get("meetingLink").isNull());
         assertFalse(body.has("roomId"));
         assertFalse(body.get("joinOpensAt").isNull());
         assertFalse(body.get("joinClosesAt").isNull());
 
-        Appointment saved = appointmentRepository.findById(UUID.fromString(body.get("id").asText())).orElseThrow();
+        Appointment saved = appointmentRepository.findById(UUID.fromString(body.get("id").asString())).orElseThrow();
         assertNotNull(saved.getRoomId());
         assertEquals(22, saved.getRoomId().length());
         assertFalse(saved.getRoomId().contains(psychologist.getId().toString()));
@@ -136,8 +136,8 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
     @Test
     void provedorOmitidoMantemLinkExternoENormalizaEsquema() throws Exception {
         JsonNode body = body(postAppointment(createBody(null, "meet.google.com/abc-defg-hij")));
-        assertEquals("EXTERNAL_LINK", body.get("meetingProvider").asText());
-        assertEquals("https://meet.google.com/abc-defg-hij", body.get("meetingLink").asText());
+        assertEquals("EXTERNAL_LINK", body.get("meetingProvider").asString());
+        assertEquals("https://meet.google.com/abc-defg-hij", body.get("meetingLink").asString());
         assertTrue(body.get("joinOpensAt").isNull());
     }
 
@@ -265,20 +265,20 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
         MvcResult host = join(a, psyToken);
         assertEquals(200, host.getResponse().getStatus());
         JsonNode hostBody = body(host);
-        assertEquals("HOST", hostBody.get("role").asText());
-        assertEquals("token-" + psychologist.getId(), hostBody.get("token").asText());
-        assertEquals(psychologist.getId().toString(), hostBody.get("identity").asText());
-        assertEquals(patient.getId().toString(), hostBody.get("remoteIdentity").asText());
-        assertEquals("wss://video.psiconet.test", hostBody.get("serverUrl").asText());
+        assertEquals("HOST", hostBody.get("role").asString());
+        assertEquals("token-" + psychologist.getId(), hostBody.get("token").asString());
+        assertEquals(psychologist.getId().toString(), hostBody.get("identity").asString());
+        assertEquals(patient.getId().toString(), hostBody.get("remoteIdentity").asString());
+        assertEquals("wss://video.psiconet.test", hostBody.get("serverUrl").asString());
         assertEquals(15 * 60, hostBody.get("aloneTimeoutSeconds").asLong());
         // Limite de horário: 60 min após o fim da consulta
         assertEquals(a.getEndDateTime().plusMinutes(60).truncatedTo(ChronoUnit.SECONDS),
-                LocalDateTime.parse(hostBody.get("hardStopAt").asText()).truncatedTo(ChronoUnit.SECONDS));
+                LocalDateTime.parse(hostBody.get("hardStopAt").asString()).truncatedTo(ChronoUnit.SECONDS));
         assertEquals("no-store", host.getResponse().getHeader("Cache-Control"));
         assertFalse(host.getResponse().getContentAsString().contains(a.getRoomId()));
 
         JsonNode guestBody = body(join(a, patientToken));
-        assertEquals("GUEST", guestBody.get("role").asText());
+        assertEquals("GUEST", guestBody.get("role").asString());
 
         verify(videoProvider, org.mockito.Mockito.times(2)).ensureRoom(VideoRoomIds.roomName(a.getRoomId()), 2);
         assertEquals(2, logRepository.findByAppointmentIdOrderByOccurredAtAsc(a.getId()).stream()
@@ -337,8 +337,8 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
     void mensagemDeJanelaFechadaInformaHorarioDeAbertura() throws Exception {
         Appointment a = inAppStartingIn(120);
         JsonNode error = body(join(a, patientToken));
-        assertTrue(error.get("message").asText().startsWith("A sala abre em "));
-        assertTrue(error.get("message").asText().contains(a.getStartDateTime().minusMinutes(30).toLocalTime()
+        assertTrue(error.get("message").asString().startsWith("A sala abre em "));
+        assertTrue(error.get("message").asString().contains(a.getStartDateTime().minusMinutes(30).toLocalTime()
                 .truncatedTo(ChronoUnit.MINUTES).toString()));
     }
 
@@ -391,7 +391,7 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
         MvcResult webhook = mvc.perform(post("/webhooks/video").contentType("application/webhook+json")
                 .header("Authorization", "assinado").content(new byte[65 * 1024])).andReturn();
         assertEquals(413, webhook.getResponse().getStatus());
-        assertEquals("PAYLOAD_TOO_LARGE", body(webhook).get("code").asText());
+        assertEquals("PAYLOAD_TOO_LARGE", body(webhook).get("code").asString());
         verify(videoProvider, never()).parseWebhook(any(), any());
 
         // Resto da API (sem arquivo): teto de 2 MB.
@@ -457,6 +457,6 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
 
     private void assertCode(MvcResult result, int status, String code) throws Exception {
         assertEquals(status, result.getResponse().getStatus(), result.getResponse().getContentAsString());
-        assertEquals(code, body(result).get("code").asText());
+        assertEquals(code, body(result).get("code").asString());
     }
 }

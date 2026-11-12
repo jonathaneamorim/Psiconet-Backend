@@ -1,9 +1,10 @@
 package com.psiconet.contract;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.model.entities.clinical.Appointment;
+import com.psiconet.model.entities.clinical.RecurrenceRule;
 import com.psiconet.model.entities.clinical.TreatmentLink;
 import com.psiconet.model.entities.financial.Payment;
 import com.psiconet.model.entities.profile.conection.Connection;
@@ -13,6 +14,7 @@ import com.psiconet.model.enums.UserStatusEnum;
 import com.psiconet.model.enums.clinical.AppointmentStatusEnum;
 import com.psiconet.model.enums.clinical.MeetingProviderEnum;
 import com.psiconet.model.enums.clinical.MeetingTypeEnum;
+import com.psiconet.model.enums.clinical.RecurrenceFrequencyEnum;
 import com.psiconet.model.enums.conection.ConectionStatusEnum;
 import com.psiconet.model.enums.financial.PaymentStatusEnum;
 import com.psiconet.repositories.clinical.AppointmentRepository;
@@ -65,6 +67,7 @@ class ApiContractSnapshotTest extends IntegrationTestBase {
     @Autowired PaymentRepository paymentRepository;
     @Autowired ConnectionRepository connectionRepository;
     @Autowired NotificationService notificationService;
+    @Autowired com.psiconet.repositories.clinical.RecurrenceRuleRepository ruleRepository;
 
     @Test
     void contratoDaApiPermaneceIgual() throws Exception {
@@ -114,7 +117,7 @@ class ApiContractSnapshotTest extends IntegrationTestBase {
         MvcResult login = mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
                 .content(json(Map.of("email", psychologist.getEmail(), "password", TestData.STRONG_PASSWORD)))).andReturn();
         contract.put("POST /auth/login", shape(login));
-        String psy = body(login).get("token").asText();
+        String psy = body(login).get("token").asString();
         String pat = tokenFor(patient);
         String adm = tokenFor(admin);
 
@@ -136,6 +139,33 @@ class ApiContractSnapshotTest extends IntegrationTestBase {
         record(contract, "GET /legal/versions", get("/legal/versions"), null);
         record(contract, "GET /legal/consents/status", get("/legal/consents/status"), pat);
         record(contract, "GET /video/config", get("/video/config"), pat);
+
+        RecurrenceRule rule = new RecurrenceRule();
+        rule.setTreatmentLink(link);
+        rule.setFrequency(RecurrenceFrequencyEnum.WEEKLY);
+        rule.setDayOfWeek(java.time.DayOfWeek.MONDAY);
+        rule.setStartTime(java.time.LocalTime.of(10, 0));
+        rule.setEndTime(java.time.LocalTime.of(10, 50));
+        rule.setStartDate(LocalDate.now().plusDays(1));
+        rule.setMeetingType(MeetingTypeEnum.VIDEO_CALL);
+        rule.setMeetingProvider(MeetingProviderEnum.EXTERNAL_LINK);
+        rule.setMeetingLink("https://meet.example.com/x");
+        rule.setPrice(new BigDecimal("150.00"));
+        rule.setIsActive(true);
+        rule = ruleRepository.save(rule);
+        record(contract, "GET /treatment-links/{id}/recurrence-rules", get("/treatment-links/" + link.getId() + "/recurrence-rules"), psy);
+        record(contract, "GET /recurrence-rules/{id}/preview", get("/recurrence-rules/" + rule.getId() + "/preview")
+                .param("from", LocalDate.now().toString()).param("to", LocalDate.now().plusDays(20).toString()), psy);
+
+        // Prontuário: conteúdo do editor (JsonNode) atravessa o Jackson na entrada e na saída
+        record(contract, "GET /medical-records/links/{id}", get("/medical-records/links/" + link.getId()), psy);
+        MvcResult note = mvc.perform(post("/medical-records/links/" + link.getId() + "/notes").header("Authorization", bearer(psy))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":\"RECORD\",\"title\":\"Sessão\",\"content\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Relato\",\"marks\":[{\"type\":\"bold\"}]}]}]}}"))
+                .andReturn();
+        contract.put("POST /medical-records/links/{id}/notes", shape(note));
+        record(contract, "GET /medical-records", get("/medical-records"), psy);
+        record(contract, "GET /patient/medical-records", get("/patient/medical-records"), pat);
         record(contract, "GET /admin/users", get("/admin/users"), adm);
         record(contract, "GET /admin/dashboard", get("/admin/dashboard"), adm);
         record(contract, "erro 401", get("/notifications"), null);
@@ -185,14 +215,14 @@ class ApiContractSnapshotTest extends IntegrationTestBase {
             if (!value.isEmpty()) out.add(signature(value.get(0)));
             return out;
         }
-        if (value.isNull()) return objectMapper.getNodeFactory().textNode("null");
-        if (value.isBoolean()) return objectMapper.getNodeFactory().textNode("boolean");
+        if (value.isNull()) return objectMapper.getNodeFactory().stringNode("null");
+        if (value.isBoolean()) return objectMapper.getNodeFactory().stringNode("boolean");
         if (value.isNumber()) {
             String raw = value.toString();
             int dot = raw.indexOf('.');
-            return objectMapper.getNodeFactory().textNode(dot < 0 ? "integer" : "decimal(" + (raw.length() - dot - 1) + ")");
+            return objectMapper.getNodeFactory().stringNode(dot < 0 ? "integer" : "decimal(" + (raw.length() - dot - 1) + ")");
         }
-        String s = value.asText();
+        String s = value.asString();
         String kind;
         if (UUID_RE.matcher(s).matches()) kind = "uuid";
         else if (DATE_RE.matcher(s).matches()) kind = "date";
@@ -201,6 +231,6 @@ class ApiContractSnapshotTest extends IntegrationTestBase {
         else if (LOCAL_DATETIME_RE.matcher(s).matches()) kind = "datetime-local";
         else if (TIME_RE.matcher(s).matches()) kind = "time";
         else kind = "string";
-        return objectMapper.getNodeFactory().textNode(kind);
+        return objectMapper.getNodeFactory().stringNode(kind);
     }
 }

@@ -1,6 +1,6 @@
 package com.psiconet.services.implement.clinical;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.psiconet.infra.crypto.ClinicalCryptoService;
 import com.psiconet.infra.crypto.ClinicalCryptoService.WrappedKey;
 import com.psiconet.infra.exceptions.ClinicalUnavailableException;
@@ -104,7 +104,7 @@ public class ClinicalRecordSupport {
         payload.put("authorCrp", note.getAuthorCrp());
         payload.put("finalizedAt", String.valueOf(note.getFinalizedAt()));
         return ClinicalAuditService.sha256(RichTextSanitizer.canonical(
-                com.fasterxml.jackson.databind.json.JsonMapper.builder().build().valueToTree(payload)));
+                tools.jackson.databind.json.JsonMapper.builder().build().valueToTree(payload)));
     }
 
     public static String addendumHash(String previousHash, SessionNoteAddendum a, String reason, String canonicalContent) {

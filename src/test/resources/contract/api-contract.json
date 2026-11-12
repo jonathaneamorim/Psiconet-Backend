@@ -231,6 +231,43 @@
       }
     }
   },
+  "GET /medical-records" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : [ {
+      "linkActive" : "boolean",
+      "notesCount" : "integer",
+      "patientName" : "string",
+      "patientUserId" : "uuid",
+      "pendingAccessRequests" : "integer",
+      "recordId" : "uuid",
+      "recordOpened" : "boolean",
+      "treatmentLinkId" : "uuid",
+      "updatedAt" : "datetime-local"
+    } ]
+  },
+  "GET /medical-records/links/{id}" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "canEdit" : "boolean",
+      "closing" : "null",
+      "createdAt" : "null",
+      "demand" : "null",
+      "goals" : "null",
+      "history" : "null",
+      "linkActive" : "boolean",
+      "opened" : "boolean",
+      "openingDate" : "null",
+      "patientName" : "string",
+      "patientUserId" : "uuid",
+      "procedures" : "null",
+      "recordId" : "null",
+      "treatmentLinkId" : "uuid",
+      "updatedAt" : "null",
+      "version" : "null"
+    }
+  },
   "GET /notifications" : {
     "status" : 200,
     "contentType" : "application/json",
@@ -259,6 +296,17 @@
     "status" : 200,
     "contentType" : "application/json",
     "body" : "integer"
+  },
+  "GET /patient/medical-records" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : [ {
+      "latestRequest" : "null",
+      "linkActive" : "boolean",
+      "psychologistCrp" : "string",
+      "psychologistName" : "string",
+      "treatmentLinkId" : "uuid"
+    } ]
   },
   "GET /patients/me" : {
     "status" : 200,
@@ -363,11 +411,46 @@
       "state" : "null"
     }
   },
+  "GET /recurrence-rules/{id}/preview" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : [ "datetime-local" ]
+  },
   "GET /tickets" : {
     "status" : 200,
     "contentType" : "application/json",
     "body" : {
       "content" : [ ],
+      "page" : {
+        "number" : "integer",
+        "size" : "integer",
+        "totalElements" : "integer",
+        "totalPages" : "integer"
+      }
+    }
+  },
+  "GET /treatment-links/{id}/recurrence-rules" : {
+    "status" : 200,
+    "contentType" : "application/json",
+    "body" : {
+      "content" : [ {
+        "adjustForWeekend" : "boolean",
+        "dayOfWeek" : "string",
+        "endDate" : "null",
+        "endTime" : "time",
+        "frequency" : "string",
+        "id" : "uuid",
+        "intervalDays" : "null",
+        "isActive" : "boolean",
+        "location" : "null",
+        "meetingLink" : "string",
+        "meetingProvider" : "string",
+        "meetingType" : "string",
+        "price" : "decimal(1)",
+        "startDate" : "date",
+        "startTime" : "time",
+        "title" : "null"
+      } ],
       "page" : {
         "number" : "integer",
         "size" : "integer",
@@ -415,6 +498,41 @@
       "rememberMe" : "boolean",
       "role" : "string",
       "token" : "string"
+    }
+  },
+  "POST /medical-records/links/{id}/notes" : {
+    "status" : 201,
+    "contentType" : "application/json",
+    "body" : {
+      "addenda" : [ ],
+      "appointmentId" : "null",
+      "appointmentStart" : "null",
+      "authorCrp" : "null",
+      "authorName" : "null",
+      "content" : {
+        "content" : [ {
+          "content" : [ {
+            "marks" : [ {
+              "type" : "string"
+            } ],
+            "text" : "string",
+            "type" : "string"
+          } ],
+          "type" : "string"
+        } ],
+        "type" : "string"
+      },
+      "createdAt" : "datetime-local",
+      "editable" : "boolean",
+      "finalizedAt" : "null",
+      "id" : "uuid",
+      "integrityHash" : "null",
+      "integrityVerified" : "boolean",
+      "status" : "string",
+      "title" : "string",
+      "type" : "string",
+      "updatedAt" : "datetime-local",
+      "version" : "integer"
     }
   },
   "erro 400 validação" : {
