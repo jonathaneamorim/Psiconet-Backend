@@ -100,12 +100,6 @@
             <scope>runtime</scope>
             <optional>true</optional>
         </dependency>
-        <!-- TEMPORÁRIO (upgrade do Spring Boot, ADR 018): aponta propriedades renomeadas/removidas -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-properties-migrator</artifactId>
-            <scope>runtime</scope>
-        </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
