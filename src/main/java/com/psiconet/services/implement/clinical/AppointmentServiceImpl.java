@@ -100,6 +100,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (!endDateTime.isAfter(dto.getStartDateTime())) {
             throw new BusinessException("endDateTime", "A data e hora de fim devem ser posteriores ao início.");
         }
+        AppointmentLimits.requireDuration(dto.getStartDateTime(), endDateTime, "endDateTime");
+        AppointmentLimits.requireWithinHorizon(dto.getStartDateTime().toLocalDate(), "startDateTime");
 
         String title = (dto.getTitle() != null && !dto.getTitle().isBlank())
                 ? dto.getTitle()

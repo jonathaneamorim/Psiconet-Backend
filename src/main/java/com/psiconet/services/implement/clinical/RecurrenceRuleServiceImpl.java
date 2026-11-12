@@ -96,6 +96,8 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
         if (!dto.getEndTime().isAfter(dto.getStartTime())) {
             throw new BusinessException("endTime", "O horário de fim deve ser posterior ao início.");
         }
+        AppointmentLimits.requireDuration(dto.getStartDate().atTime(dto.getStartTime()), dto.getStartDate().atTime(dto.getEndTime()), "endTime");
+        AppointmentLimits.requireWithinHorizon(dto.getStartDate(), "startDate");
 
         MeetingFieldsValidator.MeetingFields meeting = MeetingFieldsValidator.validate(
                 dto.getMeetingType(), dto.getMeetingProvider(), dto.getMeetingLink(), dto.getLocation(),
