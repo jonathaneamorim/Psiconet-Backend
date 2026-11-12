@@ -338,7 +338,7 @@ class VideoSessionIntegrationTest extends IntegrationTestBase {
         Appointment a = inAppStartingIn(120);
         JsonNode error = body(join(a, patientToken));
         assertTrue(error.get("message").asText().startsWith("A sala abre em "));
-        assertTrue(error.get("message").asText().contains(a.getStartDateTime().minusMinutes(10).toLocalTime()
+        assertTrue(error.get("message").asText().contains(a.getStartDateTime().minusMinutes(30).toLocalTime()
                 .truncatedTo(ChronoUnit.MINUTES).toString()));
     }
 
