@@ -28,6 +28,8 @@ public interface ConnectionRepository extends JpaRepository<Connection, UUID> {
 
     Page<Connection> findByReceiverAndStatus(User receiver, ConectionStatusEnum status, Pageable pageable);
 
+    Page<Connection> findBySenderAndStatus(User sender, ConectionStatusEnum status, Pageable pageable);
+
     @Query("SELECT c FROM Connection c WHERE (c.sender = :user OR c.receiver = :user) AND c.status = :status")
     Page<Connection> findByUserAndStatus(@Param("user") User user, @Param("status") ConectionStatusEnum status, Pageable pageable);
 }

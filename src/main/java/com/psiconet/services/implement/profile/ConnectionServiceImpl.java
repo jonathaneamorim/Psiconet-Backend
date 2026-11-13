@@ -180,6 +180,13 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<ConnectionDTO> listSentRequests(User user, Pageable pageable) {
+        return connectionRepository.findBySenderAndStatus(user, ConectionStatusEnum.PENDING, pageable)
+                .map(connectionMapper::toDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<ActiveConnectionDTO> listAcceptedConnections(User user, Pageable pageable) {
         // Traduz o campo de ordenação do DTO (connectedAt) para o campo da entidade (acceptedAt)
         Sort sort = pageable.getSort();

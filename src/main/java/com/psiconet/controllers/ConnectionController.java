@@ -66,6 +66,15 @@ public class ConnectionController {
         return ResponseEntity.ok(connectionService.listPendingRequests(user, pageable));
     }
 
+    /** Solicitações que o usuário enviou e ainda aguardam resposta (cancelar = DELETE /connections/{id}). */
+    @GetMapping("/sent")
+    public ResponseEntity<Page<ConnectionDTO>> listSentRequests(
+            @AuthenticationPrincipal User user,
+            @SortableBy({"requestedAt"}) @PageableDefault(size = 10) Pageable pageable
+    ) {
+        return ResponseEntity.ok(connectionService.listSentRequests(user, pageable));
+    }
+
     @GetMapping
     public ResponseEntity<Page<ActiveConnectionDTO>> listAcceptedConnections(
             @AuthenticationPrincipal User user,

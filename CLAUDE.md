@@ -111,7 +111,8 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   troca obrigatória). **Só admins criam admins** (`POST /admin/admins`, conta nova, `criado_por_id`); paciente/psicólogo
   **nunca** viram admin. Admin não altera o próprio status; admin base não pode ser inativado; sempre ≥ 1 admin ativo.
 - **CPF** mascarado no backend estilo Pix (`•••.456.789-••`, `CpfMasker`). Admin nunca vê conteúdo clínico.
-- **Conexões/vínculo**: aceitar conexão cria/reativa `TreatmentLink`; remover desativa.
+- **Conexões/vínculo**: aceitar conexão cria/reativa `TreatmentLink`; remover desativa. Pendentes: recebidas em
+  `GET /connections/pending`, enviadas em `GET /connections/sent`; o remetente cancela com `DELETE /connections/{id}`.
 - **Chamados**: `OPEN → IN_PROGRESS → RESOLVED → CLOSED` (resposta do usuário reabre `RESOLVED`; `CLOSED` é terminal).
   Máx. 3 ativos por usuário, 2 min entre aberturas, duplicatas por hash (24 h / 10 min). Resposta ou finalização do admin
   ⇒ notificação + e-mail (só protocolo). Admin aparece ao usuário como "Equipe Psiconet".

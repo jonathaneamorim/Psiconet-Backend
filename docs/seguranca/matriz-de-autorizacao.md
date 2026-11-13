@@ -25,7 +25,8 @@ válidas, troca de senha resolvida e aceite dos documentos vigentes (`SecurityFi
 | `GET /psychologists/{id}`, `/psychologists/search` | | ✔ | ✔ | ✔ | perfil público |
 | `POST /connections/{targetUserId}` | | ✔ | ✔ | | — |
 | `PATCH /connections/{id}/accept`, `/reject` | | ✔ | ✔ | | só quem recebeu (remetente ⇒ 403; terceiro ⇒ 404) |
-| `DELETE /connections/{id}`, `GET /connections`, `/connections/pending` | | ✔ | ✔ | | remetente ou destinatário |
+| `DELETE /connections/{id}`, `GET /connections`, `/connections/pending` | | ✔ | ✔ | | remetente ou destinatário (DELETE de pendente pelo remetente = cancelar) |
+| `GET /connections/sent` | | ✔ | ✔ | | só as solicitações pendentes que o próprio usuário enviou |
 | `PATCH /treatment-links/{id}/price` | | | ✔ | | psicólogo do vínculo |
 | `POST /treatment-links/{id}/recurrence-rules` | | | ✔ | | psicólogo do vínculo, vínculo ativo |
 | `GET /treatment-links/{id}/recurrence-rules` | | ✔ | ✔ | | participante do vínculo |
