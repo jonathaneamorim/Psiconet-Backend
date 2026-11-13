@@ -4,9 +4,9 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.psiconet.infra.video.InvalidWebhookSignatureException;
 import com.psiconet.infra.video.VideoAccessException;
 import com.psiconet.infra.video.VideoProperties;
@@ -136,7 +136,7 @@ public class LiveKitVideoProvider implements VideoProvider {
         JsonNode response = callRoomService("ListRooms", Map.of(), null);
         List<ActiveRoom> rooms = new ArrayList<>();
         for (JsonNode room : response.path("rooms")) {
-            rooms.add(new ActiveRoom(room.path("name").asText(""), room.path("num_participants").asInt(0)));
+            rooms.add(new ActiveRoom(room.path("name").asString(""), room.path("num_participants").asInt(0)));
         }
         return rooms;
     }
@@ -146,7 +146,7 @@ public class LiveKitVideoProvider implements VideoProvider {
         JsonNode response = callRoomService("ListParticipants", Map.of("room", roomName), roomName);
         List<String> identities = new ArrayList<>();
         for (JsonNode participant : response.path("participants")) {
-            String identity = participant.path("identity").asText(null);
+            String identity = participant.path("identity").asString(null);
             if (identity != null) identities.add(identity);
         }
         return identities;
@@ -196,7 +196,7 @@ public class LiveKitVideoProvider implements VideoProvider {
             throw new InvalidWebhookSignatureException("Corpo do webhook ilegível.");
         }
 
-        VideoWebhookEvent.Type type = switch (body.path("event").asText("")) {
+        VideoWebhookEvent.Type type = switch (body.path("event").asString("")) {
             case "participant_joined" -> VideoWebhookEvent.Type.PARTICIPANT_JOINED;
             // Conexão abortada também é uma saída, do ponto de vista de presença.
             case "participant_left", "participant_connection_aborted" -> VideoWebhookEvent.Type.PARTICIPANT_LEFT;
@@ -207,9 +207,9 @@ public class LiveKitVideoProvider implements VideoProvider {
             return Optional.empty();
         }
 
-        String roomName = body.path("room").path("name").asText(null);
-        String identity = body.path("participant").path("identity").asText(null);
-        String eventId = body.path("id").asText(null);
+        String roomName = body.path("room").path("name").asString(null);
+        String identity = body.path("participant").path("identity").asString(null);
+        String eventId = body.path("id").asString(null);
         // createdAt é int64 em segundos; o JSON do protobuf pode trazê-lo como string.
         long createdAt = body.path("createdAt").asLong(0);
         Instant occurredAt = createdAt > 0 ? Instant.ofEpochSecond(createdAt) : Instant.now();
@@ -237,7 +237,7 @@ public class LiveKitVideoProvider implements VideoProvider {
             return response == null || response.isBlank()
                     ? objectMapper.createObjectNode()
                     : objectMapper.readTree(response);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             log.warn("Resposta ilegível do provedor de vídeo em {}.", method);
             throw VideoAccessException.unavailable();
         } catch (RestClientResponseException ex) {

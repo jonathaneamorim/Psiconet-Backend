@@ -17,6 +17,14 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.validation.BindException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.bind.ServletRequestBindingException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.HashMap;
@@ -53,6 +61,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidSession(com.psiconet.infra.security.InvalidSessionException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ErrorResponse.withCode(HttpStatus.UNAUTHORIZED.value(), "SESSION_EXPIRED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ScheduleOverlapException.class)
+    public ResponseEntity<ErrorResponse> handleScheduleOverlap(ScheduleOverlapException ex) {
+        ErrorResponse body = ErrorResponse.withCode(HttpStatus.CONFLICT.value(), "SCHEDULE_OVERLAP", ex.getMessage());
+        body.setConflicts(ex.getConflicts());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     @ExceptionHandler(LegalVersionOutdatedException.class)
@@ -96,12 +111,14 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.withCode(HttpStatus.SERVICE_UNAVAILABLE.value(), "CLINICAL_UNAVAILABLE", ex.getMessage()));
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
-        log.warn("Argumento inválido: {}", ex.getMessage());
+    // Nenhum código da aplicação lança IllegalArgumentException para o cliente (regra vira BusinessException):
+    // quando ela chega aqui vem de biblioteca/JDK, e a mensagem é interna — não é devolvida nem logada inteira.
+    @ExceptionHandler({IllegalArgumentException.class, java.time.DateTimeException.class})
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(RuntimeException ex) {
+        log.warn("Argumento inválido: {}", ex.getClass().getSimpleName());
         ErrorResponse response = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
-                ex.getMessage()
+                "Requisição inválida. Verifique os dados enviados."
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -136,8 +153,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(BindException ex) {
         Map<String, String> errors = new HashMap<>();
 
         ex.getBindingResult().getAllErrors().forEach((error) -> {
@@ -145,7 +162,8 @@ public class GlobalExceptionHandler {
             errors.putIfAbsent(fieldName, error.getDefaultMessage());
         });
 
-        log.warn("Falha na validação de dados: {}", errors);
+        // Só os nomes dos campos: as mensagens podem ecoar o valor enviado.
+        log.warn("Falha na validação de dados: {}", errors.keySet());
 
         ErrorResponse response = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
@@ -225,7 +243,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class,
-            MissingServletRequestParameterException.class
+            MissingServletRequestParameterException.class,
+            MissingServletRequestPartException.class,
+            MultipartException.class,
+            ServletRequestBindingException.class
     })
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
         log.warn("Requisição malformada: {}", ex.getClass().getSimpleName());
@@ -239,6 +260,37 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), "Recurso não encontrado."));
     }
 
+    // Validação de parâmetros simples (@RequestParam/@PathVariable com @Min, @Size...): 400 com erros por campo.
+    @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class})
+    public ResponseEntity<ErrorResponse> handleParameterValidation(Exception ex) {
+        Map<String, String> errors = new HashMap<>();
+        if (ex instanceof ConstraintViolationException cve) {
+            cve.getConstraintViolations().forEach(v -> {
+                String path = v.getPropertyPath().toString();
+                errors.putIfAbsent(path.substring(path.lastIndexOf('.') + 1), v.getMessage());
+            });
+        } else if (ex instanceof HandlerMethodValidationException hmve) {
+            hmve.getParameterValidationResults().forEach(r -> r.getResolvableErrors().forEach(e ->
+                    errors.putIfAbsent(r.getMethodParameter().getParameterName(), e.getDefaultMessage())));
+        }
+        log.warn("Falha na validação de parâmetros: {}", errors.keySet());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Erro de validação nos campos enviados.",
+                        errors.isEmpty() ? null : errors));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(new ErrorResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), "Formato de envio não suportado para este recurso."));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotAcceptable(HttpMediaTypeNotAcceptableException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
+                .body(new ErrorResponse(HttpStatus.NOT_ACCEPTABLE.value(), "Formato de resposta não disponível para este recurso."));
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
@@ -249,9 +301,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
         log.warn("Upload rejeitado por exceder o tamanho máximo permitido.");
         ErrorResponse response = new ErrorResponse(
-                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                HttpStatus.CONTENT_TOO_LARGE.value(),
                 "Arquivo muito grande. Reduza o tamanho e tente novamente."
         );
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(response);
     }
 }

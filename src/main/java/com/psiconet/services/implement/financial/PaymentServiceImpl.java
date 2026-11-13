@@ -1,8 +1,10 @@
 package com.psiconet.services.implement.financial;
 
+import org.springframework.security.access.AccessDeniedException;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.storage.FileStorageService;
+import com.psiconet.infra.storage.StoredFileType;
 import com.psiconet.mapper.PaymentMapper;
 import com.psiconet.model.dtos.financial.FinancialSummaryDTO;
 import com.psiconet.model.dtos.financial.PaymentDTO;
@@ -26,6 +28,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -59,21 +63,24 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = findPaymentOrThrow(paymentId);
         TreatmentLink treatmentLink = payment.getTreatmentLink();
 
+        requireParticipant(patientUser, payment);
         if (!treatmentLink.getPatient().getUser().getId().equals(patientUser.getId())) {
-            throw new BusinessException("payment", "Você não tem permissão para enviar o comprovante deste pagamento.");
+            throw new AccessDeniedException("Somente o paciente envia o comprovante deste pagamento.");
         }
 
         if (!RECEIPT_UPLOADABLE_STATUSES.contains(payment.getStatus())) {
             throw new BusinessException("payment", "Não é possível enviar comprovante para este pagamento no status atual.");
         }
 
-        String path = fileStorageService.store(file, "receipts");
+        String path = fileStorageService.store(file, "receipts", StoredFileType.ANY);
+        String previousReceipt = payment.getReceiptUrl();
 
         payment.setReceiptUrl(path);
         payment.setReceiptUploadedAt(LocalDateTime.now());
         payment.setStatus(PaymentStatusEnum.AWAITING_REVIEW);
         payment.setRejectionReason(null);
         payment = paymentRepository.save(payment);
+        deleteAfterCommit(previousReceipt);
 
         notificationService.create(
                 treatmentLink.getPsychologist().getUser(),
@@ -162,8 +169,9 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = findPaymentOrThrow(paymentId);
         TreatmentLink treatmentLink = payment.getTreatmentLink();
 
+        requireParticipant(patientUser, payment);
         if (!treatmentLink.getPatient().getUser().getId().equals(patientUser.getId())) {
-            throw new BusinessException("payment", "Você não tem permissão para contestar este pagamento.");
+            throw new AccessDeniedException("Somente o paciente pode contestar este pagamento.");
         }
 
         if (payment.getStatus() != PaymentStatusEnum.REJECTED) {
@@ -202,7 +210,7 @@ public class PaymentServiceImpl implements PaymentService {
             return paymentRepository.findByPatient(patient, status, pageable).map(paymentMapper::toDto);
         }
 
-        throw new BusinessException("payment", "Apenas psicólogos e pacientes possuem pagamentos.");
+        throw new AccessDeniedException("Apenas psicólogos e pacientes possuem pagamentos.");
     }
 
     @Override
@@ -240,7 +248,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .orElseThrow(() -> new EntityNotFoundException(Patient.class, user.getId()));
             rows = paymentRepository.aggregateByPatientAndAppointmentMonth(patient, start, end);
         } else {
-            throw new BusinessException("payment", "Apenas psicólogos e pacientes possuem pagamentos.");
+            throw new AccessDeniedException("Apenas psicólogos e pacientes possuem pagamentos.");
         }
 
         Map<PaymentStatusEnum, long[]> counts = new EnumMap<>(PaymentStatusEnum.class);
@@ -306,23 +314,45 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void validateOwnership(User user, Payment payment) {
+        requireParticipant(user, payment);
+    }
+
+    // Pagamento de terceiros: 404, sem confirmar que existe (anti-IDOR).
+    private void requireParticipant(User user, Payment payment) {
         TreatmentLink treatmentLink = payment.getTreatmentLink();
         boolean isPsychologist = treatmentLink.getPsychologist().getUser().getId().equals(user.getId());
         boolean isPatient = treatmentLink.getPatient().getUser().getId().equals(user.getId());
 
         if (!isPsychologist && !isPatient) {
-            throw new BusinessException("payment", "Você não tem permissão para acessar este pagamento.");
+            throw new EntityNotFoundException(Payment.class, payment.getId());
         }
     }
 
     private void validatePsychologistOwnership(User psychologistUser, Payment payment) {
+        requireParticipant(psychologistUser, payment);
         if (!payment.getTreatmentLink().getPsychologist().getUser().getId().equals(psychologistUser.getId())) {
-            throw new BusinessException("payment", "Você não tem permissão para revisar este pagamento.");
+            throw new AccessDeniedException("Somente o psicólogo do vínculo revisa este pagamento.");
         }
     }
 
     private Payment findPaymentOrThrow(UUID paymentId) {
         return paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new EntityNotFoundException(Payment.class, paymentId));
+    }
+
+    // Reenvio substitui o comprovante (o anterior foi rejeitado/contestado): o arquivo antigo só sai do
+    // disco depois do commit — se a transação falhar, o registro continua apontando para um arquivo que existe.
+    private void deleteAfterCommit(String previousReceipt) {
+        if (previousReceipt == null) return;
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            fileStorageService.delete(previousReceipt);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                fileStorageService.delete(previousReceipt);
+            }
+        });
     }
 }

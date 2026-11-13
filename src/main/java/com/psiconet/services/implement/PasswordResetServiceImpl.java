@@ -1,5 +1,8 @@
 package com.psiconet.services.implement;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import com.psiconet.model.enums.UserStatusEnum;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.mail.EmailService;
 import com.psiconet.infra.security.SessionService;
@@ -23,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PasswordResetServiceImpl implements PasswordResetService {
@@ -47,7 +51,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     @Transactional
     public void requestReset(String email) {
         // Não revela se o e-mail existe ou não: o controller sempre responde com a mesma mensagem genérica.
-        userRepository.findByEmail(email).ifPresent(user -> {
+        // Só conta ativa recebe link: as demais não autenticam, então a senha nova não teria uso.
+        userRepository.findByEmail(email).filter(user -> user.getStatus() == UserStatusEnum.ACTIVE).ifPresent(user -> {
             passwordResetCodeRepository.deleteUnusedByUser(user);
 
             String token = generateToken();
@@ -71,7 +76,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public void validateResetToken(String token) {
         // Chamado pelo front ao abrir a tela de troca de senha (a partir do link recebido por
         // e-mail): garante que o token ainda é válido (não expirado, não usado) sem consumi-lo —
@@ -83,6 +88,10 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     @Transactional
     public void confirmReset(String token, String newPassword) {
         PasswordResetCode resetCode = resolveValidToken(token);
+        // Conta inativada/bloqueada depois do pedido: mesma resposta de token inválido (não revela o status).
+        if (resetCode.getUser().getStatus() != UserStatusEnum.ACTIVE) {
+            throw new BusinessException("token", INVALID_TOKEN_MESSAGE);
+        }
 
         resetCode.setUsed(true);
         passwordResetCodeRepository.save(resetCode);
@@ -94,6 +103,15 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         user.setMustChangePassword(false);
         userRepository.save(user);
         sessionService.revokeAll(user, SessionRevocationReasonEnum.PASSWORD_CHANGED);
+        emailService.sendPasswordChanged(user.getEmail(), user.getFullName());
+    }
+
+    @Override
+    @Scheduled(fixedRateString = "${psiconet.password-reset.cleanup-fixed-rate:86400000}", initialDelay = 600000)
+    @Transactional
+    public void purgeStaleTokens() {
+        int removed = passwordResetCodeRepository.deleteUsedOrExpired(LocalDateTime.now());
+        if (removed > 0) log.info("Códigos de redefinição de senha removidos (usados ou vencidos): {}", removed);
     }
 
     private PasswordResetCode resolveValidToken(String token) {

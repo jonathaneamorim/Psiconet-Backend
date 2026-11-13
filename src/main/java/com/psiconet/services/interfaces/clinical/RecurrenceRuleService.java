@@ -1,5 +1,6 @@
 package com.psiconet.services.interfaces.clinical;
 
+import com.psiconet.model.dtos.clinical.RecurrenceOccurrenceOverlapDTO;
 import com.psiconet.model.dtos.clinical.RecurrenceRuleCreateDTO;
 import com.psiconet.model.dtos.clinical.RecurrenceRuleDTO;
 import com.psiconet.model.entities.access.User;
@@ -16,4 +17,8 @@ public interface RecurrenceRuleService {
     Page<RecurrenceRuleDTO> list(User user, UUID treatmentLinkId, Pageable pageable);
     void deactivate(User psychologistUser, UUID ruleId);
     List<LocalDateTime> previewOccurrences(User user, UUID ruleId, LocalDate from, LocalDate to);
+    /** Ocorrências do rascunho (próximos 90 dias) que coincidem com outra consulta — ADR 019. */
+    List<RecurrenceOccurrenceOverlapDTO> draftOverlaps(User psychologistUser, UUID treatmentLinkId, RecurrenceRuleCreateDTO dto);
+    /** Datas da série no intervalo que coincidem com outra consulta — só o psicólogo da regra. */
+    List<RecurrenceOccurrenceOverlapDTO> previewOverlaps(User psychologistUser, UUID ruleId, LocalDate from, LocalDate to);
 }

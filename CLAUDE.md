@@ -2,7 +2,8 @@
 
 > Fonte oficial de verdade do backend (substitui o antigo `GEMINI.md`, removido).
 > Projeto irmão: **Psiconet-Frontend** (Next.js) — `../Psiconet-Frontend/CLAUDE.md`.
-> Decisões registradas em `docs/decisoes/` (ADRs 000–016). Diagnóstico inicial: `docs/diagnostico-fase0.md`.
+> Decisões registradas em `docs/decisoes/` (ADRs 000–019). Diagnóstico inicial: `docs/diagnostico-fase0.md`.
+> Segurança: `docs/seguranca/` (auditoria 2026-11-11 e matriz de autorização por endpoint).
 > Documentos legais e inventário de dados: `docs/legal/`.
 
 ## Produto
@@ -12,15 +13,21 @@ cobranças via Pix, notificações, **sessões on-line na Sala Psiconet (vídeo 
 **chamados de suporte** e **área administrativa** (usuários, administradores, dashboard, comunicados).
 
 ## Stack e versões
-- Java 17 (build validado com JDK 25), Spring Boot 3.3.5, Spring Security + JWT (`java-jwt` 4.4.0, HS256)
-- Spring Data JPA / Hibernate, PostgreSQL 15 · **H2 em memória nos testes** (perfil `test`)
-- MapStruct 1.5.5, Lombok 1.18.42, Bean Validation, SpringDoc 2.6, `spring-dotenv` (lê `.env`)
-- Thymeleaf **core** (templates de e-mail), Bucket4j 8.14 (rate limit), OpenPDF 2.0.3 (PDF do prontuário)
+- **Java 25 (LTS)**, **Spring Boot 4.1.2** (Spring Framework 7, Spring Security 7, Hibernate ORM 7, Tomcat 11) — ADR 018.
+  Suporte OSS da 4.1 até 31/07/2027; acompanhar a 4.2 (GA + 1º patch). Spring Security + JWT (`java-jwt` 4.6.2, HS256)
+- **Jackson 3** (`tools.jackson.*`; anotações seguem em `com.fasterxml.jackson.annotation`) — nunca injetar o
+  `ObjectMapper` do Jackson 2 (não existe no contexto); `asString()` em vez de `asText()`
+- Spring Data JPA / Hibernate 7, PostgreSQL 15 · **H2 em memória nos testes** (perfil `test`)
+- MapStruct 1.6.3, Lombok 1.18.48, Bean Validation, springdoc 3.2.0 (linha da Boot 4.1), `springboot4-dotenv` 5.1.0 (lê `.env`)
+- Starters da Boot 4: `spring-boot-starter-webmvc`; testes com `spring-boot-starter-webmvc-test` e `-security-test`
+  (`@AutoConfigureMockMvc` em `org.springframework.boot.webmvc.test.autoconfigure`, `@MockitoBean` no lugar de `@MockBean`)
+- Thymeleaf **core** 3.1 (templates de e-mail), Bucket4j 8.14 (rate limit), OpenPDF 2.0.3 (PDF do prontuário). Maven 3.9.16 (wrapper)
 
 ## Comandos
 ```bash
 ./mvnw spring-boot:run                  # API em :8080 (lê .env; se mvnw sem +x: sh mvnw ...)
-./mvnw test                             # 150+ testes, H2 — nunca toca no banco de dev
+./mvnw test                             # 260+ testes, H2 — nunca toca no banco de dev nem lê o .env
+./mvnw test -Dtest=ApiContractSnapshotTest -Dcontract.update=true   # SÓ após mudança de contrato decidida (ADR 018)
 ./mvnw -DskipTests package              # jar em target/
 docker compose up -d                    # Postgres (5432) + pgAdmin (5050)
 docker compose --profile video up -d livekit   # LiveKit local (:7880) p/ testar a Sala Psiconet (VIDEO_* no .env)
@@ -28,7 +35,7 @@ scripts/dev-celular.sh [stop]           # Sala Psiconet pelo celular: túneis HT
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run   # inclui chamados de exemplo (DevDataSeeder)
 ```
-Swagger: `http://localhost:8080/swagger-ui/index.html`.
+Swagger: `http://localhost:8080/swagger-ui/index.html` — só com `API_DOCS_ENABLED=true` no `.env` (desligado por padrão e proibido em prod).
 
 ## Estrutura (`src/main/java/com/psiconet`)
 ```
@@ -42,6 +49,7 @@ controllers/            REST: AuthController, UserController, NotificationContro
                         PatientMedicalRecordController (/patient/medical-records — paciente)
 infra/
   config/               DataInitializer (admin base), SchemaPatches (DDL idempotente), DevDataSeeder (perfil dev),
+                        ProductionConfigValidator (perfil prod: recusa subir com config insegura/incompleta),
                         ClinicalDataMaintenance (migração legado + rotação de chave), AsyncConfig, TicketProperties
   crypto/               ClinicalCryptoService (AES-256-GCM, envelope), MasterKeyProvider/EnvMasterKeyProvider
   exceptions/           BusinessException(400), ConflictException(409), EntityNotFound(404), AccountStatus(403),
@@ -51,13 +59,15 @@ infra/
   mail/                 EmailService (fachada), EmailDispatcher (AFTER_COMMIT + @Async), EmailRenderer, EmailTemplate
   ratelimit/            @RateLimited, RateLimitInterceptor, RateLimiterService, RateLimitProperties
   richtext/             RichTextSanitizer (whitelist do JSON do editor)
-  security/             SecurityConfig (+ cabeçalhos), SecurityFilter (JWT + status + versão + sessão + aceite),
-                        TokenService (acesso 15 min, claim sid), SessionService (refresh rotativo), SessionProperties,
+  security/             SecurityConfig (+ cabeçalhos, papel por rota), SecurityFilter (JWT + status + versão + sessão + aceite),
+                        TokenService (acesso 15 min, subject = id, claim sid), SessionService (refresh rotativo), SessionProperties,
                         JsonSecurityErrorHandlers
+  storage/              FileStorageService/LocalFileStorageServiceImpl, StoredFileType (tipo/extensão pelo conteúdo)
   text/                 TextSanitizer, CpfMasker
   video/                VideoProvider (abstração), VideoProperties (psiconet.video.*), livekit/LiveKitVideoProvider,
                         VideoAccessException (códigos VIDEO_*), InvalidWebhookSignatureException
-  web/                  ClientIpResolver (+ X-Client-User-Agent), UserAgentSummarizer, WebMvcConfig, ClinicalNoStoreFilter,
+  web/                  ClientIpResolver (+ X-Client-User-Agent), UserAgentSummarizer, WebMvcConfig (teto de página 200),
+                        @SortableBy + PageableSortGuard (ordenação por lista branca), ClinicalNoStoreFilter,
                         RequestSizeLimitFilter (corpo ≤ 2 MB sem arquivo; webhook de vídeo ≤ 64 KB ⇒ 413)
 mapper/ model/{entities,dtos,enums}/ repositories/ services/{interfaces,implement}/
 src/main/resources/templates/email/   layout/, components/, <template>.html, text/<template>.txt
@@ -71,9 +81,16 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 - Erros no formato `ErrorResponse { status, code?, message, timestamp, errors? }`. `code` estável para o front:
   `UNAUTHENTICATED`, `FORBIDDEN`, `PASSWORD_CHANGE_REQUIRED`, `CONSENT_REQUIRED`, `LEGAL_VERSION_OUTDATED`,
   `SESSION_EXPIRED`, `RATE_LIMITED`, `PAYLOAD_TOO_LARGE`, `ACCOUNT_INACTIVE|BLOCKED|PENDING`, `CLINICAL_UNAVAILABLE`,
-  `VIDEO_NOT_IN_APP`, `VIDEO_APPOINTMENT_INACTIVE`, `VIDEO_WINDOW_NOT_OPEN`, `VIDEO_WINDOW_CLOSED`, `VIDEO_UNAVAILABLE`.
+  `VIDEO_NOT_IN_APP`, `VIDEO_APPOINTMENT_INACTIVE`, `VIDEO_WINDOW_NOT_OPEN`, `VIDEO_WINDOW_CLOSED`, `VIDEO_UNAVAILABLE`,
+  `SCHEDULE_OVERLAP` (409 + `conflicts`, ADR 019).
+- **Contrato da API protegido por teste:** `ApiContractSnapshotTest` (forma de 30 respostas) e `ClinicalHashStabilityTest`
+  (JSON canônico/hash do prontuário — se mudar, anotações antigas parecem adulteradas). Diferença = bug, salvo ADR.
 - Sucesso com mensagem sempre em JSON (`MessageResponseDTO`) — nunca texto puro (causa do bug do cadastro, ADR 002).
-- Recurso de outro usuário → **404** (anti-IDOR); permissão de papel → 403 via `@PreAuthorize`.
+- Recurso de outro usuário → **404** (anti-IDOR, mesma resposta de id inexistente); participante sem a permissão do
+  papel → 403 (`AccessDeniedException`). Papel exigido **também por rota** no `SecurityConfig` (o `@PreAuthorize` roda
+  depois do `@Valid`). Endpoint novo entra na `docs/seguranca/matriz-de-autorizacao.md` e no `AuthorizationMatrixIntegrationTest`.
+- `Pageable` aceita `?sort=` só dos campos em `@SortableBy`; senha nova sempre com `@StrongPassword` (≤ 72 bytes, limite do BCrypt).
+- Upload só via `FileStorageService.store(file, dir, StoredFileType...)`: nunca usar nome/extensão do cliente.
 - Textos livres passam por `TextSanitizer`; mensagens e e-mails em **pt-BR**.
 - Schema: `ddl-auto=update` só aditivo; ajustes que o Hibernate não faz vão em `SchemaPatches` (idempotentes,
   não destrutivos, só Postgres). Recomendação: Flyway antes de produção (ADR 001).
@@ -94,7 +111,8 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   troca obrigatória). **Só admins criam admins** (`POST /admin/admins`, conta nova, `criado_por_id`); paciente/psicólogo
   **nunca** viram admin. Admin não altera o próprio status; admin base não pode ser inativado; sempre ≥ 1 admin ativo.
 - **CPF** mascarado no backend estilo Pix (`•••.456.789-••`, `CpfMasker`). Admin nunca vê conteúdo clínico.
-- **Conexões/vínculo**: aceitar conexão cria/reativa `TreatmentLink`; remover desativa.
+- **Conexões/vínculo**: aceitar conexão cria/reativa `TreatmentLink`; remover desativa. Pendentes: recebidas em
+  `GET /connections/pending`, enviadas em `GET /connections/sent`; o remetente cancela com `DELETE /connections/{id}`.
 - **Chamados**: `OPEN → IN_PROGRESS → RESOLVED → CLOSED` (resposta do usuário reabre `RESOLVED`; `CLOSED` é terminal).
   Máx. 3 ativos por usuário, 2 min entre aberturas, duplicatas por hash (24 h / 10 min). Resposta ou finalização do admin
   ⇒ notificação + e-mail (só protocolo). Admin aparece ao usuário como "Equipe Psiconet".
@@ -103,6 +121,18 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
   correções por adendo encadeado. Psicólogo exporta PDF de guarda (`/medical-records/links/{id}/pdf`, opcional
   `includePrivateNotes`). Editor aceita alinhamento (center/right) e tamanho de fonte da lista fixa. Paciente **solicita** acesso; psicólogo libera (somente leitura, prazo/PDF opcionais)
   ou nega com justificativa. Tudo em `auditoria_clinica` (hash encadeado, imutável).
+
+## Agendamento — sobreposição de horário (ADR 019)
+- **Outro paciente no mesmo horário:** permitido só com `acknowledgeOverlap=true` em `AppointmentCreateDTO`/
+  `RecurrenceRuleCreateDTO`; sem ele ⇒ **409 `SCHEDULE_OVERLAP`** com `conflicts` (id, início, fim, título, paciente).
+  **Mesmo paciente** sobreposto ⇒ 400 (duplicidade), mesmo confirmando. Encostado (fim = início) não conflita;
+  `CANCELLED` não conta. Regras em `ScheduleOverlapService`; criação e geração recorrente travam o psicólogo.
+- **Sinalização calculada, nunca armazenada:** `hasOverlap`/`overlappingAppointments` no `AppointmentDTO` só para o
+  psicólogo dono (lote, só `ACCEPTED` não terminadas); para o paciente os campos não existem no JSON.
+- Pré-checagem `GET /appointments/overlaps?start&end[&excludeId]`; série: `GET /recurrence-rules/{id}/preview/overlaps` e
+  rascunho `POST /treatment-links/{id}/recurrence-rules/overlaps` (90 dias) — só psicólogo, rate limit `schedule-overlap-check`.
+- **Recorrência nunca pula ocorrência em silêncio:** sobreposta a outro paciente é gerada e notificada
+  (`SCHEDULE_OVERLAP`, só data/hora); a 1ª ocorrência da série exige confirmação. ⚠ Regras 2 e 3 do ADR 019 aguardam o dono do produto.
 
 ## Videochamada — Sala Psiconet (ADR 016)
 - **Arquitetura:** provedor SFU/WebRTC gerenciado (**LiveKit** Cloud ou self-host) atrás de `VideoProvider`. O backend só
@@ -140,6 +170,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 ## Padrão de notificação (ADR 005)
 - `NotificationService.create(recipient, actor, type, title, message, referenceType, referenceId)`.
 - Vídeo: `VIDEO_SESSION_REMINDER`, `VIDEO_PARTICIPANT_JOINED` (categoria "agendamento"; `referenceType = APPOINTMENT`).
+- Agenda: `SCHEDULE_OVERLAP` (só psicólogo, categoria "agendamento", ator nulo = sistema; nunca cita paciente).
 - `referenceType`: `APPOINTMENT`, `CONNECTION`, `PAYMENT`, `TICKET`, `ANNOUNCEMENT`, `MEDICAL_RECORD`, `LEGAL` (o front roteia por ele).
 - Tipos obrigatórios (`NotificationType.isMandatory()`): chamados, comunicados, prontuário e `LEGAL_DOCUMENTS_UPDATED` — ignoram preferências.
 - Mensagens nunca contêm conteúdo clínico.
@@ -149,7 +180,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 - Conta por IP (X-Forwarded-For aceito apenas de `TRUSTED_PROXIES`) e por usuário; 429 + `Retry-After`.
 - Políticas: `login`, `login-account`, `register`, `forgot-password`, `reset-password`, `refresh`, `change-password`, `ticket-open`,
   `ticket-message`, `record-access-request`, `admin-announcement`, `admin-user-write`, `clinical-write`, `video-join`,
-  `video-webhook`.
+  `video-webhook`, `schedule-overlap-check`.
 
 ## Legal e Privacidade (ADRs 011–015)
 - **Documentos** (minutas, com `[A PREENCHER]`): `docs/legal/*.md` com cabeçalho `tipo/titulo/versao/vigencia` e
@@ -167,6 +198,9 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 
 ## Segurança e LGPD
 - Segredos só por ambiente (`JWT_SECRET` ≥ 32 chars obrigatório; `CLINICAL_MASTER_KEYS`; `ADMIN_*`; SMTP; `VIDEO_API_SECRET`).
+  Produção roda com `SPRING_PROFILES_ACTIVE=prod` (`ProductionConfigValidator`): sem senha do banco, chaves clínicas,
+  e-mail, admin base ou URLs públicas https a API não sobe. No Docker Compose, `$` em valor do `.env` vira variável — use `$$`.
+- Imagem: JRE, usuário não-root, testes no build, TZ `America/Sao_Paulo`; uploads no volume `uploads_prod`.
 - Dados clínicos: AES-256-GCM por campo, DEK por prontuário, KEK versionada fora do banco; sem chave → 503.
   Respostas clínicas com `Cache-Control: no-store`. Triggers no Postgres bloqueiam DELETE em prontuário/anotações e
   UPDATE/DELETE em auditorias/adendos/anotação finalizada.
@@ -189,6 +223,7 @@ docs/legal/                           termos-de-uso.md, politica-de-privacidade.
 - Aceitar `role`/`status`/ids de dono do cliente para decidir permissão; criar caminho de promoção a ADMIN.
 - Expor entidade JPA, CPF completo ou conteúdo clínico a admin, em e-mail, notificação, log ou mensagem de erro.
 - Aceitar HTML do cliente no conteúdo clínico (só JSON do editor, validado pelo `RichTextSanitizer`).
-- Rodar testes contra o banco de desenvolvimento; usar `th:utext` com dado de usuário.
+- Rodar testes contra o banco de desenvolvimento ou deixar a suíte depender do `.env` local; usar `th:utext` com dado de usuário.
+- Responder 400 "sem permissão" para recurso de terceiros; ordenar por campo livre; gravar arquivo com a extensão do cliente.
 - Alterar documento legal sem subir a versão/histórico; aceitar data, IP ou versão de aceite vindos do cliente;
   apagar/alterar registro de `consentimento_usuario`; guardar refresh token em texto claro.

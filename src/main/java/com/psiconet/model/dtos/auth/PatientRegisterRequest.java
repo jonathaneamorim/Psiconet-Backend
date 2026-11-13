@@ -23,8 +23,7 @@ public class PatientRegisterRequest {
     private String fullName;
 
     @NotBlank(message = "A senha é obrigatória.")
-    @Size(max = 128, message = "Senha muito longa.")
-    @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
+    @StrongPassword
     private String password;
 
     @NotBlank(message = "O CPF é obrigatório.")

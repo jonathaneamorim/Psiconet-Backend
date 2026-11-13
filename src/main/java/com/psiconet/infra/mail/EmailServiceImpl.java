@@ -1,5 +1,7 @@
 package com.psiconet.infra.mail;
 
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -26,6 +28,13 @@ public class EmailServiceImpl implements EmailService {
         publish(toEmail, EmailTemplate.PASSWORD_RESET, vars(fullName,
                 "link", link,
                 "expiracaoMinutos", expirationMinutes));
+    }
+
+    @Override
+    public void sendPasswordChanged(String toEmail, String fullName) {
+        publish(toEmail, EmailTemplate.PASSWORD_CHANGED, vars(fullName,
+                "quando", LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")),
+                "link", frontendUrl + "/login"));
     }
 
     @Override

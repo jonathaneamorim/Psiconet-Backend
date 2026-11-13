@@ -1,0 +1,12 @@
+# Nada de segredo, dado de usuário ou artefato local no contexto de build da imagem
+.env
+.env.*
+!.env.example
+uploads/
+backups/
+target/
+.git/
+.idea/
+.vscode/
+.claude/
+*.log

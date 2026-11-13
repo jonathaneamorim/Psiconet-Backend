@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout(~{::previa}, ~{::conteudo})}">
+<body>
+<span th:fragment="previa">A senha da sua conta na Psiconet foi alterada.</span>
+<td th:fragment="conteudo" style="padding:32px;">
+  <p th:replace="~{components/paragrafo :: saudacao(${nome})}"></p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;">
+    A senha da sua conta na Psiconet foi alterada em <strong th:text="${quando}">01/01/2026 às 10:00</strong>. Por segurança, todas as sessões abertas foram encerradas.
+  </p>
+  <p style="font-size:15px;color:#334155;margin:0 0 24px;line-height:22px;">
+    <strong>Não foi você?</strong> Use a opção "Esqueci minha senha" na tela de login para definir uma nova senha agora e fale com a equipe pelo Suporte.
+  </p>
+  <div th:replace="~{components/botao :: botao(${link}, 'Ir para o login')}"></div>
+</td>
+</body>
+</html>

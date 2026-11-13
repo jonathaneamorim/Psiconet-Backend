@@ -1,5 +1,11 @@
 package com.psiconet.controllers.clinical;
 
+import java.util.List;
+import java.time.LocalDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
+import com.psiconet.model.dtos.clinical.OverlapSummaryDTO;
+import com.psiconet.infra.web.SortableBy;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.psiconet.model.dtos.clinical.AppointmentCancelDTO;
 import com.psiconet.model.dtos.clinical.AppointmentCreateDTO;
 import com.psiconet.model.dtos.clinical.AppointmentDTO;
@@ -28,6 +34,7 @@ public class AppointmentController {
     private final AppointmentService appointmentService;
     private final VideoSessionService videoSessionService;
 
+    @PreAuthorize("hasRole('PSYCHOLOGIST')")
     @PostMapping
     public ResponseEntity<AppointmentDTO> create(
             @AuthenticationPrincipal User user,
@@ -48,12 +55,26 @@ public class AppointmentController {
     @GetMapping
     public ResponseEntity<Page<AppointmentDTO>> listMine(
             @AuthenticationPrincipal User user,
-            @PageableDefault(size = 10) Pageable pageable
+            @SortableBy({"startDateTime", "endDateTime"}) @PageableDefault(size = 10) Pageable pageable
     ) {
         return ResponseEntity.ok(appointmentService.listMyAppointments(user, pageable));
     }
 
     // Detalhe de uma consulta (só psicólogo ou paciente do vínculo; demais recebem 404).
+    // Pré-checagem de sobreposição para o aviso em tempo real do formulário (ADR 019). Só o psicólogo,
+    // só a própria agenda.
+    @PreAuthorize("hasRole('PSYCHOLOGIST')")
+    @GetMapping("/overlaps")
+    @RateLimited("schedule-overlap-check")
+    public ResponseEntity<List<OverlapSummaryDTO>> overlaps(
+            @AuthenticationPrincipal User user,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
+            @RequestParam(required = false) UUID excludeId
+    ) {
+        return ResponseEntity.ok(appointmentService.findOverlaps(user, start, end, excludeId));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<AppointmentDTO> getById(
             @AuthenticationPrincipal User user,

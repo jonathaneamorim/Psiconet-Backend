@@ -1,6 +1,6 @@
 package com.psiconet.controllers.support;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.model.enums.RoleEnum;
 import com.psiconet.model.enums.UserStatusEnum;
@@ -42,7 +42,7 @@ class TicketFlowIntegrationTest extends IntegrationTestBase {
         String adminToken = tokenFor(createUser(RoleEnum.ADMIN, UserStatusEnum.ACTIVE));
 
         JsonNode ticket = open(patientToken, "Erro ao salvar perfil");
-        String id = ticket.get("id").asText();
+        String id = ticket.get("id").asString();
 
         mvc.perform(get("/tickets").header("Authorization", bearer(patientToken)))
                 .andExpect(jsonPath("$.content", hasSize(1)))
@@ -77,7 +77,7 @@ class TicketFlowIntegrationTest extends IntegrationTestBase {
     void usuarioNaoAcessaChamadoDeOutro() throws Exception {
         String ownerToken = tokenFor(createUser(RoleEnum.PATIENT, UserStatusEnum.ACTIVE));
         String otherToken = tokenFor(createUser(RoleEnum.PSYCHOLOGIST, UserStatusEnum.ACTIVE));
-        String id = open(ownerToken, "Chamado privado").get("id").asText();
+        String id = open(ownerToken, "Chamado privado").get("id").asString();
 
         mvc.perform(get("/tickets/" + id).header("Authorization", bearer(otherToken)))
                 .andExpect(status().isNotFound());
@@ -110,7 +110,7 @@ class TicketFlowIntegrationTest extends IntegrationTestBase {
     @Test
     void mensagemDuplicadaETamanhoMaximo() throws Exception {
         String token = tokenFor(createUser(RoleEnum.PATIENT, UserStatusEnum.ACTIVE));
-        String id = open(token, "Chamado de mensagens").get("id").asText();
+        String id = open(token, "Chamado de mensagens").get("id").asString();
 
         mvc.perform(post("/tickets/" + id + "/messages").header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("content", "Alguma novidade?"))))

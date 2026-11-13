@@ -3,8 +3,14 @@ package com.psiconet.infra.storage;
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Set;
+
 public interface FileStorageService {
-    String store(MultipartFile file, String subdirectory);
+    /**
+     * Grava o arquivo com nome gerado (UUID) e a extensão do tipo validado. Imagens são decodificadas
+     * e regravadas (remove EXIF/GPS e qualquer carga escondida). Devolve "subdiretorio/arquivo".
+     */
+    String store(MultipartFile file, String subdirectory, Set<StoredFileType> allowedTypes);
     Resource loadAsResource(String relativePath);
 
     // Remove um arquivo previamente armazenado (best-effort). Usado para não deixar arquivos órfãos

@@ -194,7 +194,7 @@ class LegalConsentIntegrationTest extends IntegrationTestBase {
                         .content(json(Map.of("email", patient.getEmail(), "password", TestData.STRONG_PASSWORD))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.consentRequired").value(true))
-                .andReturn()).get("token").asText();
+                .andReturn()).get("token").asString();
 
         // Resto da API bloqueado; status, documentos e logout liberados
         mvc.perform(get("/notifications").header("Authorization", bearer(token)))

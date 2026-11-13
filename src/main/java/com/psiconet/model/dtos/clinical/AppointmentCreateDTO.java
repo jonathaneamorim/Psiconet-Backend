@@ -35,4 +35,7 @@ public class AppointmentCreateDTO {
 
     @DecimalMin("0.0")
     private BigDecimal price;
+
+    // Horário já ocupado por outra consulta: só cria com confirmação explícita (409 SCHEDULE_OVERLAP sem ela).
+    private boolean acknowledgeOverlap;
 }

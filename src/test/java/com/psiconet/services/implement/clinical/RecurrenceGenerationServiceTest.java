@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RecurrenceGenerationServiceTest {
 
-    private final RecurrenceGenerationService service = new RecurrenceGenerationService(null, null, null, null);
+    private final RecurrenceGenerationService service = new RecurrenceGenerationService(null, null, null, null, null, null);
 
     private RecurrenceRule ruleStartingOn(LocalDate startDate, RecurrenceFrequencyEnum frequency) {
         RecurrenceRule rule = new RecurrenceRule();

@@ -14,6 +14,7 @@ public interface ConnectionService {
     void rejectRequest(User user, UUID connectionId);
     void removeConnection(User user, UUID connectionId);
     Page<ConnectionDTO> listPendingRequests(User user, Pageable pageable);
+    Page<ConnectionDTO> listSentRequests(User user, Pageable pageable);
     Page<ActiveConnectionDTO> listAcceptedConnections(User user, Pageable pageable);
 
     com.psiconet.model.dtos.profile.ConnectionStatusInfoDTO getConnectionStatus(User currentUser, User targetUser);

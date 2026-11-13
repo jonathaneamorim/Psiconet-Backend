@@ -1,13 +1,13 @@
 package com.psiconet.infra.richtext;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.MapperFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.MapperFeature;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.text.TextSanitizer;
 import org.springframework.stereotype.Component;
@@ -59,7 +59,7 @@ public class RichTextSanitizer {
     private static final JsonNodeFactory F = JsonNodeFactory.instance;
 
     public SanitizedDocument sanitize(JsonNode input) {
-        if (input == null || !input.isObject() || !"doc".equals(input.path("type").asText())) {
+        if (input == null || !input.isObject() || !"doc".equals(input.path("type").asString())) {
             throw invalid("O conteúdo da anotação é inválido.");
         }
         if (input.toString().length() > MAX_JSON_CHARS) {
@@ -93,7 +93,7 @@ public class RichTextSanitizer {
 
     private ObjectNode sanitizeNode(JsonNode node, String parentType, int depth, StringBuilder plain) {
         if (depth > MAX_DEPTH) throw invalid("A anotação tem aninhamento excessivo de listas.");
-        String type = node.path("type").asText("");
+        String type = node.path("type").asString("");
         if (!NODES.contains(type)) throw invalid("Formatação não permitida: " + safe(type));
         if (!"root".equals(parentType) && !ALLOWED_CHILDREN.getOrDefault(parentType, Set.of()).contains(type)) {
             throw invalid("Estrutura de formatação inválida.");
@@ -105,7 +105,7 @@ public class RichTextSanitizer {
         switch (type) {
             case "text" -> {
                 // Sem strip: no editor, espaços nas bordas de um trecho formatado são significativos
-                String raw = TextSanitizer.stripInvisible(node.path("text").asText(""));
+                String raw = TextSanitizer.stripInvisible(node.path("text").asString(""));
                 if (raw.isEmpty()) throw invalid("Trecho de texto vazio.");
                 out.put("text", raw);
                 plain.append(raw);
@@ -160,11 +160,11 @@ public class RichTextSanitizer {
         // Ordenadas por tipo: a mesma formatação sempre gera o mesmo JSON canônico (hash estável)
         java.util.TreeMap<String, ObjectNode> seen = new java.util.TreeMap<>();
         for (JsonNode mark : marks) {
-            String type = mark.path("type").asText("");
+            String type = mark.path("type").asString("");
             if (!MARKS.contains(type)) throw invalid("Formatação não permitida: " + safe(type));
             if ("textStyle".equals(type)) {
                 // Só o tamanho de fonte da lista fixa; qualquer outro estilo (cor, fonte, valor livre) é descartado
-                String size = mark.path("attrs").path("fontSize").asText("");
+                String size = mark.path("attrs").path("fontSize").asString("");
                 if (FONT_SIZES.contains(size)) {
                     seen.put(type, F.objectNode().put("type", type).set("attrs", F.objectNode().put("fontSize", size)));
                 }
@@ -177,7 +177,7 @@ public class RichTextSanitizer {
     }
 
     private static void putAlign(ObjectNode attrs, JsonNode node) {
-        String align = node.path("attrs").path("textAlign").asText("");
+        String align = node.path("attrs").path("textAlign").asString("");
         if (TEXT_ALIGNS.contains(align)) attrs.put("textAlign", align);
     }
 

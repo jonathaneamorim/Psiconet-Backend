@@ -1,5 +1,6 @@
 package com.psiconet.services.implement;
 
+import com.psiconet.infra.text.TextSanitizer;
 import com.psiconet.infra.exceptions.AccountStatusException;
 import com.psiconet.infra.exceptions.ConflictException;
 import com.psiconet.infra.exceptions.EmailAlreadyExistsException;
@@ -209,6 +210,7 @@ public class AuthService {
                 .map(UserSession::isRememberMe)
                 .orElse(false);
         sessionService.revokeAll(user, SessionRevocationReasonEnum.PASSWORD_CHANGED);
+        emailService.sendPasswordChanged(user.getEmail(), user.getFullName());
         return toResponse(sessionService.start(user, rememberMe));
     }
 
@@ -259,6 +261,12 @@ public class AuthService {
     private void prepareNewUser(User user, String email, String rawPassword) {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(rawPassword));
+        // Nome e telefone são exibidos a outros usuários (psicólogo, admin), vão para e-mails, PDF e
+        // logs: higieniza como todo texto livre (remove caracteres de controle, invisíveis e de
+        // sobrescrita bidirecional U+202x, que permitem falsear a exibição do nome). O escape na
+        // renderização continua sendo a defesa contra XSS.
+        user.setFullName(TextSanitizer.cleanLine(user.getFullName()));
+        user.setPhone(TextSanitizer.cleanLine(user.getPhone()));
         // O papel vem do endpoint chamado (paciente/psicólogo), nunca do corpo da requisição.
         user.setStatus(UserStatusEnum.ACTIVE);
     }

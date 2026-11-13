@@ -35,8 +35,7 @@ public class PsychologistRegisterRequest  {
     private LocalDate birthDate;
 
     @NotBlank(message = "A senha é obrigatória.")
-    @Size(max = 128, message = "Senha muito longa.")
-    @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
+    @StrongPassword
     private String password;
 
     // --- Aceite dos documentos legais (ADR 013). As versões são as que o usuário VIU na tela; o

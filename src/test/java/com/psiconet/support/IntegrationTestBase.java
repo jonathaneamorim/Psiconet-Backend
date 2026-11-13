@@ -1,7 +1,7 @@
 package com.psiconet.support;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.psiconet.infra.ratelimit.RateLimiterService;
 import com.psiconet.model.entities.access.User;
 import com.psiconet.model.entities.profile.Patient;
@@ -15,9 +15,9 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -49,7 +49,7 @@ public abstract class IntegrationTestBase {
     @Autowired protected PasswordEncoder passwordEncoder;
     @Autowired protected RateLimiterService rateLimiterService;
 
-    @MockBean protected JavaMailSender mailSender;
+    @MockitoBean protected JavaMailSender mailSender;
 
     @BeforeEach
     void baseSetUp() {
@@ -98,7 +98,7 @@ public abstract class IntegrationTestBase {
                         .content(json(Map.of("email", email, "password", password))))
                 .andExpect(status().isOk())
                 .andReturn();
-        return body(result).get("token").asText();
+        return body(result).get("token").asString();
     }
 
     protected String tokenFor(User user) throws Exception {

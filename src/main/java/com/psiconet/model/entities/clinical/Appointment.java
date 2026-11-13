@@ -20,7 +20,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "agendamento", indexes = {
         // Webhook do provedor de vídeo localiza a consulta pela sala.
-        @Index(name = "idx_agendamento_sala", columnList = "sala_id")
+        @Index(name = "idx_agendamento_sala", columnList = "sala_id"),
+        // Checagem de sobreposição por vínculo e horário (ADR 019); criado pelo ddl-auto=update (aditivo)
+        @Index(name = "idx_agendamento_vinculo_inicio", columnList = "paciente_psicologo_id, data_hora_inicio")
 })
 public class Appointment {
     @Id

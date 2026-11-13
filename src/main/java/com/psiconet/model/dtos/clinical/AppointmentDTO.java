@@ -1,5 +1,7 @@
 package com.psiconet.model.dtos.clinical;
 
+import java.util.List;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.psiconet.model.entities.embeddable.Location;
 import com.psiconet.model.enums.RoleEnum;
 import com.psiconet.model.enums.clinical.AppointmentStatusEnum;
@@ -44,6 +46,12 @@ public class AppointmentDTO {
     // O id da sala NUNCA é exposto.
     private LocalDateTime joinOpensAt;
     private LocalDateTime joinClosesAt;
+    // Sobreposição calculada a cada leitura (ADR 019), SÓ na visão do psicólogo dono. Nulos ⇒ ausentes do
+    // JSON: a resposta ao paciente nunca tem estes campos.
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Boolean hasOverlap;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<OverlapSummaryDTO> overlappingAppointments;
 
     @Getter
     @Setter

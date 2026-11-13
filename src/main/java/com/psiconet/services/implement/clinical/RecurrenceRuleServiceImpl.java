@@ -1,5 +1,9 @@
 package com.psiconet.services.implement.clinical;
 
+import java.util.ArrayList;
+import com.psiconet.model.entities.clinical.Appointment;
+import com.psiconet.model.dtos.clinical.RecurrenceOccurrenceOverlapDTO;
+import org.springframework.security.access.AccessDeniedException;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.video.VideoProperties;
@@ -35,19 +39,86 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
     private final RecurrenceRuleMapper recurrenceRuleMapper;
     private final RecurrenceGenerationService recurrenceGenerationService;
     private final VideoProperties videoProperties;
+    private final ScheduleOverlapService scheduleOverlapService;
+
+    // Rascunho do formulário: verifica as ocorrências dos próximos 90 dias.
+    private static final int DRAFT_WINDOW_DAYS = 90;
 
     @Override
     @Transactional
     public RecurrenceRuleDTO create(User psychologistUser, UUID treatmentLinkId, RecurrenceRuleCreateDTO dto) {
+        RecurrenceRule rule = buildValidatedRule(psychologistUser, treatmentLinkId, dto);
+
+        // ADR 019: a 1ª ocorrência (gerada agora) segue a regra da consulta avulsa — outro paciente no horário
+        // exige confirmação; o mesmo paciente bloqueia. As seguintes são geradas e sinalizadas pelo job.
+        List<Appointment> firstConflicts = recurrenceGenerationService.upcomingStarts(rule, LocalDate.now(), LocalDate.now().plusYears(2))
+                .stream().findFirst()
+                .map(start -> scheduleOverlapService.conflictsFor(rule.getTreatmentLink().getPsychologist(),
+                        start, start.toLocalDate().atTime(rule.getEndTime()), null))
+                .orElse(List.of());
+        scheduleOverlapService.requireCreatable(firstConflicts, rule.getTreatmentLink().getPatient().getUser().getId(),
+                dto.isAcknowledgeOverlap(), "startDate");
+
+        RecurrenceRule saved = recurrenceRuleRepository.save(rule);
+
+        // Sobreposição da 1ª ocorrência já foi confirmada pelo psicólogo: sem notificação redundante.
+        recurrenceGenerationService.ensureNextInstance(saved, firstConflicts.isEmpty());
+
+        return recurrenceRuleMapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RecurrenceOccurrenceOverlapDTO> draftOverlaps(User psychologistUser, UUID treatmentLinkId, RecurrenceRuleCreateDTO dto) {
+        RecurrenceRule draft = buildValidatedRule(psychologistUser, treatmentLinkId, dto);
+        LocalDate from = LocalDate.now();
+        return overlapsOf(draft, from, from.plusDays(DRAFT_WINDOW_DAYS));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RecurrenceOccurrenceOverlapDTO> previewOverlaps(User psychologistUser, UUID ruleId, LocalDate from, LocalDate to) {
+        RecurrenceRule rule = recurrenceRuleRepository.findById(ruleId)
+                .orElseThrow(() -> new EntityNotFoundException(RecurrenceRule.class, ruleId));
+        if (!rule.getTreatmentLink().getPsychologist().getUser().getId().equals(psychologistUser.getId())) {
+            throw new EntityNotFoundException(RecurrenceRule.class, ruleId);
+        }
+        if (!to.isAfter(from)) {
+            throw new BusinessException("to", "A data final deve ser posterior à data inicial.");
+        }
+        if (!Boolean.TRUE.equals(rule.getIsActive())) {
+            return List.of();
+        }
+        return overlapsOf(rule, from, to);
+    }
+
+    // Ocorrências futuras que coincidem com outra consulta (exceto as da própria série).
+    private List<RecurrenceOccurrenceOverlapDTO> overlapsOf(RecurrenceRule rule, LocalDate from, LocalDate to) {
+        List<RecurrenceOccurrenceOverlapDTO> result = new ArrayList<>();
+        for (LocalDateTime start : recurrenceGenerationService.upcomingStarts(rule, from, to)) {
+            LocalDateTime end = start.toLocalDate().atTime(rule.getEndTime());
+            List<Appointment> conflicts = scheduleOverlapService.conflictsFor(rule.getTreatmentLink().getPsychologist(), start, end, null)
+                    .stream()
+                    .filter(a -> a.getRecurrenceRule() == null || rule.getId() == null || !rule.getId().equals(a.getRecurrenceRule().getId()))
+                    .toList();
+            if (!conflicts.isEmpty()) {
+                result.add(new RecurrenceOccurrenceOverlapDTO(start, end, scheduleOverlapService.summarize(conflicts)));
+            }
+        }
+        return result;
+    }
+
+    /** Valida o pedido (papel, dono, vínculo, frequência, limites, reunião) e monta a regra sem persistir. */
+    private RecurrenceRule buildValidatedRule(User psychologistUser, UUID treatmentLinkId, RecurrenceRuleCreateDTO dto) {
         if (psychologistUser.getRole() != RoleEnum.PSYCHOLOGIST) {
-            throw new BusinessException("recurrenceRule", "Somente psicólogos podem criar regras de recorrência.");
+            throw new AccessDeniedException("Somente psicólogos podem criar regras de recorrência.");
         }
 
         TreatmentLink treatmentLink = treatmentLinkRepository.findById(treatmentLinkId)
                 .orElseThrow(() -> new EntityNotFoundException(TreatmentLink.class, treatmentLinkId));
 
         if (!treatmentLink.getPsychologist().getUser().getId().equals(psychologistUser.getId())) {
-            throw new BusinessException("recurrenceRule", "Você não tem permissão para criar regras neste vínculo.");
+            throw new EntityNotFoundException(TreatmentLink.class, treatmentLinkId);
         }
 
         if (!Boolean.TRUE.equals(treatmentLink.getIsActive())) {
@@ -95,6 +166,8 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
         if (!dto.getEndTime().isAfter(dto.getStartTime())) {
             throw new BusinessException("endTime", "O horário de fim deve ser posterior ao início.");
         }
+        AppointmentLimits.requireDuration(dto.getStartDate().atTime(dto.getStartTime()), dto.getStartDate().atTime(dto.getEndTime()), "endTime");
+        AppointmentLimits.requireWithinHorizon(dto.getStartDate(), "startDate");
 
         MeetingFieldsValidator.MeetingFields meeting = MeetingFieldsValidator.validate(
                 dto.getMeetingType(), dto.getMeetingProvider(), dto.getMeetingLink(), dto.getLocation(),
@@ -127,11 +200,7 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
         // IN_APP: a regra NÃO guarda sala — cada ocorrência materializada recebe um roomId próprio.
         rule.setMeetingProvider(meeting.provider());
 
-        rule = recurrenceRuleRepository.save(rule);
-
-        recurrenceGenerationService.ensureNextInstance(rule);
-
-        return recurrenceRuleMapper.toDto(rule);
+        return rule;
     }
 
     @Override
@@ -144,7 +213,7 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
         boolean isPatient = treatmentLink.getPatient().getUser().getId().equals(user.getId());
 
         if (!isPsychologist && !isPatient) {
-            throw new BusinessException("recurrenceRule", "Você não tem permissão para visualizar as regras deste vínculo.");
+            throw new EntityNotFoundException(TreatmentLink.class, treatmentLinkId);
         }
 
         return recurrenceRuleRepository
@@ -159,7 +228,11 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
                 .orElseThrow(() -> new EntityNotFoundException(RecurrenceRule.class, ruleId));
 
         if (!rule.getTreatmentLink().getPsychologist().getUser().getId().equals(psychologistUser.getId())) {
-            throw new BusinessException("recurrenceRule", "Você não tem permissão para desativar esta regra.");
+            // Paciente do vínculo conhece a regra (403); qualquer outro usuário não deve saber que ela existe (404).
+            if (rule.getTreatmentLink().getPatient().getUser().getId().equals(psychologistUser.getId())) {
+                throw new AccessDeniedException("Somente o psicólogo do vínculo pode desativar esta regra.");
+            }
+            throw new EntityNotFoundException(RecurrenceRule.class, ruleId);
         }
 
         rule.setIsActive(false);
@@ -176,7 +249,7 @@ public class RecurrenceRuleServiceImpl implements RecurrenceRuleService {
         boolean isPatient = rule.getTreatmentLink().getPatient().getUser().getId().equals(user.getId());
 
         if (!isPsychologist && !isPatient) {
-            throw new BusinessException("recurrenceRule", "Você não tem permissão para visualizar esta regra.");
+            throw new EntityNotFoundException(RecurrenceRule.class, ruleId);
         }
 
         if (!to.isAfter(from)) {

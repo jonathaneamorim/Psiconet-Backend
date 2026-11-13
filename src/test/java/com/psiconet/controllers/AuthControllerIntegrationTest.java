@@ -133,6 +133,38 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.errors.password").exists());
     }
 
+    // SEC-11: o BCrypt só considera os primeiros 72 bytes — senha maior passaria a valer pelo prefixo.
+    @Test
+    void senhaComMaisDe72BytesERecusadaNoCadastro() throws Exception {
+        Map<String, Object> longa = patientPayload(TestData.uniqueEmail("longa"), TestData.validCpf());
+        longa.put("password", TestData.STRONG_PASSWORD + "a".repeat(70));
+        mvc.perform(post("/auth/register/patient").contentType(MediaType.APPLICATION_JSON).content(json(longa)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value(containsString("72")));
+
+        // Acentos ocupam 2 bytes: 40 caracteres podem passar de 72 bytes
+        Map<String, Object> acentuada = patientPayload(TestData.uniqueEmail("acento"), TestData.validCpf());
+        acentuada.put("password", "Sé@" + "é".repeat(37));
+        mvc.perform(post("/auth/register/patient").contentType(MediaType.APPLICATION_JSON).content(json(acentuada)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").exists());
+    }
+
+    // BUG-02: senha nunca é "trimada" — com espaço nas pontas, cadastro e login usam a mesma senha.
+    @Test
+    void senhaComEspacosNasPontasFuncionaDoCadastroAoLogin() throws Exception {
+        String email = TestData.uniqueEmail("espaco");
+        Map<String, Object> payload = patientPayload(email, TestData.validCpf());
+        payload.put("password", "  Senha@Forte1  ");
+        mvc.perform(post("/auth/register/patient").contentType(MediaType.APPLICATION_JSON).content(json(payload)))
+                .andExpect(status().isCreated());
+
+        login(email, "  Senha@Forte1  ");
+        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("email", email, "password", "Senha@Forte1"))))
+                .andExpect(status().isUnauthorized());
+    }
+
     // --- Login ---
 
     @Test
@@ -209,6 +241,18 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         mvc.perform(get("/notifications/unread-count").header("Authorization", bearer(token)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    // SEC-12: o payload do JWT é legível por quem tiver o token — subject é o id, nunca o e-mail.
+    @Test
+    void tokenNaoCarregaEmailEUsaIdComoSubject() throws Exception {
+        User user = createUser(RoleEnum.PATIENT, UserStatusEnum.ACTIVE);
+        String token = tokenFor(user);
+        String payload = new String(java.util.Base64.getUrlDecoder().decode(token.split("\\.")[1]), java.nio.charset.StandardCharsets.UTF_8);
+
+        assertThat(payload).doesNotContain(user.getEmail());
+        assertThat(objectMapper.readTree(payload).get("sub").asString()).isEqualTo(user.getId().toString());
+        mvc.perform(get("/users/me").header("Authorization", bearer(token))).andExpect(status().isOk());
     }
 
     @Test

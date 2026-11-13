@@ -18,7 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -60,9 +60,9 @@ public class SecurityConfig {
                         .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()"))
                         .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
                                 new NegatedRequestMatcher(new OrRequestMatcher(
-                                        new AntPathRequestMatcher("/swagger-ui/**"),
-                                        new AntPathRequestMatcher("/swagger-ui.html"),
-                                        new AntPathRequestMatcher("/v3/api-docs/**"))),
+                                        PathPatternRequestMatcher.withDefaults().matcher("/swagger-ui/**"),
+                                        PathPatternRequestMatcher.withDefaults().matcher("/swagger-ui.html"),
+                                        PathPatternRequestMatcher.withDefaults().matcher("/v3/api-docs/**"))),
                                 new StaticHeadersWriter("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")))
                 )
 
@@ -109,6 +109,21 @@ public class SecurityConfig {
 
                         // Rotas administrativas protegidas
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // Papel exigido já na rota (SEC-13): barra antes da validação do corpo, que
+                        // senão responderia 400 a quem nem pode usar o endpoint. Os controllers repetem
+                        // com @PreAuthorize e os services conferem dono/vínculo (404 para terceiros).
+                        .requestMatchers("/medical-records/**").hasRole("PSYCHOLOGIST")
+                        .requestMatchers("/patient/medical-records/**").hasRole("PATIENT")
+                        .requestMatchers("/tickets/**").hasAnyRole("PATIENT", "PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.POST, "/appointments").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.GET, "/appointments/overlaps", "/recurrence-rules/*/preview/overlaps").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.POST, "/treatment-links/*/recurrence-rules/overlaps").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.PATCH, "/treatment-links/*/price").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.POST, "/treatment-links/*/recurrence-rules").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.PATCH, "/recurrence-rules/*/deactivate").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.PATCH, "/payments/*/approve", "/payments/*/reject").hasRole("PSYCHOLOGIST")
+                        .requestMatchers(HttpMethod.POST, "/payments/*/receipt", "/payments/*/dispute").hasRole("PATIENT")
 
                         // Outras rotas precisam de autenticação
                         .anyRequest().authenticated()

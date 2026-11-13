@@ -1,5 +1,6 @@
 package com.psiconet.services.implement.clinical;
 
+import org.springframework.security.access.AccessDeniedException;
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.model.dtos.clinical.TreatmentLinkPriceUpdateDTO;
@@ -24,14 +25,15 @@ public class TreatmentLinkServiceImpl implements TreatmentLinkService {
     @Transactional
     public void updateDefaultPrice(User psychologistUser, UUID treatmentLinkId, TreatmentLinkPriceUpdateDTO dto) {
         if (psychologistUser.getRole() != RoleEnum.PSYCHOLOGIST) {
-            throw new BusinessException("treatmentLink", "Somente psicólogos podem definir o preço da consulta.");
+            throw new AccessDeniedException("Somente psicólogos podem definir o preço da consulta.");
         }
 
         TreatmentLink treatmentLink = treatmentLinkRepository.findById(treatmentLinkId)
                 .orElseThrow(() -> new EntityNotFoundException(TreatmentLink.class, treatmentLinkId));
 
         if (!treatmentLink.getPsychologist().getUser().getId().equals(psychologistUser.getId())) {
-            throw new BusinessException("treatmentLink", "Você não tem permissão para alterar este vínculo.");
+            // Vínculo de outro psicólogo: 404, sem confirmar que existe (anti-IDOR).
+            throw new EntityNotFoundException(TreatmentLink.class, treatmentLinkId);
         }
 
         treatmentLink.setDefaultPrice(dto.getDefaultPrice());

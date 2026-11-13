@@ -1,0 +1,13 @@
+Olá[# th:if="${nome != ''}"], [(${nome})][/]!
+
+A senha da sua conta na Psiconet foi alterada em [(${quando})].
+Por segurança, todas as sessões abertas foram encerradas.
+
+Não foi você? Use a opção "Esqueci minha senha" na tela de login para definir uma nova senha agora
+e fale com a equipe pelo Suporte:
+
+[(${link})]
+
+--
+Este é um e-mail automático. Não responda — para falar com a equipe, use a opção Suporte na plataforma.
+© [(${anoAtual})] Psiconet — Cuidando da sua saúde mental.

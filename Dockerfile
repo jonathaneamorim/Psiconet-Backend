@@ -1,15 +1,23 @@
-# Stage 1: build (usa Maven)
-FROM maven:3.8.3-eclipse-temurin-17 AS builder
+# Stage 1: build + testes (H2 em memória; nunca toca em banco real). Falha de teste impede a imagem.
+FROM maven:3.9.16-eclipse-temurin-25 AS builder
 WORKDIR /build
 COPY pom.xml .
+RUN mvn -q -B dependency:go-offline
 COPY src ./src
 # Documentos legais (Termos, Privacidade, Cookies) empacotados no jar
 COPY docs/legal ./docs/legal
-RUN mvn clean package -DskipTests
+RUN mvn -B clean package
 
-# Stage 2: runtime (roda o app)
-FROM eclipse-temurin:17-jdk
+# Stage 2: runtime só com JRE, usuário sem privilégios
+FROM eclipse-temurin:25-jre
+ENV TZ=America/Sao_Paulo
+RUN groupadd --system psiconet && useradd --system --gid psiconet --home-dir /app --shell /usr/sbin/nologin psiconet \
+    && mkdir -p /app/uploads && chown -R psiconet:psiconet /app
 WORKDIR /app
-COPY --from=builder /build/target/*.jar app.jar
+COPY --from=builder --chown=psiconet:psiconet /build/target/*.jar app.jar
+USER psiconet
 EXPOSE 8080
-ENTRYPOINT ["java","-XX:+UseContainerSupport","-XX:MaxRAMPercentage=75.0","-jar","/app/app.jar"]
+# Endpoint público e barato (só lê os documentos legais em memória)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf "GET /legal/versions HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3 && head -1 <&3 | grep -q " 200 "'
+ENTRYPOINT ["java","-XX:+UseContainerSupport","-XX:MaxRAMPercentage=75.0","-Duser.timezone=America/Sao_Paulo","-jar","/app/app.jar"]

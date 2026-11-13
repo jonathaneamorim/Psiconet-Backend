@@ -49,7 +49,7 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         Optional<TokenService.TokenClaims> claims = recoverToken(request).flatMap(tokenService::validate);
         Optional<User> authenticated = claims
-                .flatMap(c -> userRepository.findByEmail(c.subject())
+                .flatMap(c -> userRepository.findById(c.userId())
                         // Status, versão e sessão conferidos a CADA requisição: inativar/bloquear o usuário,
                         // incrementar tokenVersion (logout geral, troca de senha) ou encerrar a sessão do
                         // dispositivo (logout) invalida o token na hora.

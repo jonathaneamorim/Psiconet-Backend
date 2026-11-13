@@ -1,5 +1,6 @@
 package com.psiconet.controllers.admin;
 
+import com.psiconet.infra.web.SortableBy;
 import com.psiconet.infra.ratelimit.RateLimited;
 import com.psiconet.model.dtos.support.*;
 import com.psiconet.model.entities.access.User;
@@ -36,7 +37,7 @@ public class AdminTicketController {
             @RequestParam(required = false) TicketPriorityEnum priority,
             @RequestParam(required = false) TicketCategoryEnum category,
             @RequestParam(required = false) String search,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @SortableBy({"createdAt", "updatedAt"}) @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ResponseEntity.ok(ticketService.listForAdmin(status, priority, category, search, pageable));
     }

@@ -1,8 +1,11 @@
 package com.psiconet.services.implement.profile;
 
+import com.psiconet.infra.text.TextSanitizer;
+
 import com.psiconet.infra.exceptions.BusinessException;
 import com.psiconet.infra.exceptions.EntityNotFoundException;
 import com.psiconet.infra.storage.FileStorageService;
+import com.psiconet.infra.storage.StoredFileType;
 import com.psiconet.mapper.PsychologistMapper;
 import com.psiconet.model.dtos.profile.BillingSettingsUpdateDTO;
 import com.psiconet.model.dtos.profile.ConnectionStatusInfoDTO;
@@ -111,11 +114,12 @@ public class PsychologistService {
         Psychologist psychologist = psychologistRepository.findByUser(user)
                 .orElseThrow(() -> new EntityNotFoundException("Perfil de psicólogo não encontrado."));
 
-        user.setFullName(dto.fullName());
-        user.setPhone(dto.phone());
+        // Texto livre exibido a pacientes/admin/e-mail/log: remove controle, invisíveis e bidi (U+202x).
+        user.setFullName(TextSanitizer.cleanLine(dto.fullName()));
+        user.setPhone(TextSanitizer.cleanLine(dto.phone()));
         userRepository.save(user);
 
-        psychologist.setDescription(dto.description());
+        psychologist.setDescription(TextSanitizer.clean(dto.description()));
         psychologist.setOfficeAddress(dto.officeAddress());
         psychologist = psychologistRepository.save(psychologist);
 
@@ -140,7 +144,7 @@ public class PsychologistService {
 
         String previousPhotoUrl = user.getPhotoUrl();
 
-        String path = fileStorageService.store(file, "avatars");
+        String path = fileStorageService.store(file, "avatars", StoredFileType.IMAGES);
         String fileName = path.substring(path.lastIndexOf('/') + 1);
 
         user.setPhotoUrl(backendUrl + "/public/photos/" + fileName);

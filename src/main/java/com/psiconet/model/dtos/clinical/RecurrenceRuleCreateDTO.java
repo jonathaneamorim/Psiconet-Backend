@@ -53,4 +53,7 @@ public class RecurrenceRuleCreateDTO {
     private BigDecimal price;
 
     private boolean adjustForWeekend;
+
+    // Horário já ocupado por outra consulta: só cria com confirmação explícita (409 SCHEDULE_OVERLAP sem ela).
+    private boolean acknowledgeOverlap;
 }
